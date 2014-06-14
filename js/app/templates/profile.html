@@ -1,0 +1,35 @@
+<form class="form-horizontal">
+    <fieldset>
+
+        <!-- Form Name -->
+        <legend>My Info</legend>
+
+        <!-- Text input-->
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="name">My Name</label>
+            <div class="col-md-6">
+                <input id="name" name="name" placeholder="" class="form-control input-md" required="" type="text" value="<%= name %>">
+
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-md-4 control-label" for="picture">Picture</label>
+            <div class="col-md-6">
+
+                <div id="profileFile" class="fileinput fileinput-new" data-provides="fileinput">
+                    <div class="img_container">
+                        <div class="fileinput-new thumbnail"><img src="<%= pictureUrl %>" /></div>
+
+                        <div id="profilePicture" class="fileinput-preview fileinput-exists thumbnail" data-trigger="fileinput">
+                        </div>
+                        <span class="btn-default btn-file btn-lg img_remove">
+                            <span class="glyphicon glyphicon-edit"></span><input id="picture" type="file">
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </fieldset>
+</form>

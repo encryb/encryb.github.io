@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+    <title>Login</title>
+    <script src="https://www.dropbox.com/static/api/dropbox-datastores-1.0-latest.js"></script>
+</head>
+<body>
+<!-- Hide UI until user has authenticated -->
+<div id="wrapper">
+    <button id="authorize-button">Authorize</button>
+
+</div>
+
+<script type="text/javascript">
+
+    var DROPBOX_APP_KEY = '9loor53qc1sjxn9';
+
+    // Exposed for easy access in the browser console.
+    var client = new Dropbox.Client({key: DROPBOX_APP_KEY});
+
+
+    var authorizeButton = document.getElementById('authorize-button');
+    authorizeButton.onclick = handleAuthClick;
+
+    // Try to finish OAuth authorization.
+    client.authenticate({interactive:false}, function (error) {
+        if (error) {
+            alert('Authentication error: ' + error);
+        }
+    });
+
+    function handleAuthClick(event) {
+        client.authenticate();
+        return false;
+    }
+
+    <!--
+      function handleClientLoad() {
+        window.setTimeout(checkAuth,1);
+      }
+
+      function checkAuth() {
+        gapi.auth.authorize({client_id: CLIENT_ID, scope: SCOPES, immediate: true}, handleAuthResult);
+      }
+      function handleAuthResult(authResult) {
+        var authorizeButton = document.getElementById('authorize-button');
+        if (authResult && !authResult.error) {
+          window.location = "require.html";
+        } else {
+          authorizeButton.style.visibility = '';
+          authorizeButton.onclick = handleAuthClick;
+        }
+      }
+
+    -->
+
+</script>
+
+
+</body>
+</html>
+

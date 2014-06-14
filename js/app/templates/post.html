@@ -1,0 +1,33 @@
+<div>
+    <div class="pull-left">
+        <img src="<%= profilePictureUrl %>" style="margin-right: 10px; width: 60px; height: 40px;">
+     </div>
+    <div style="margin-left: 50px;">
+        <div>
+            <strong>Ogi Bor</strong>
+        </div>
+        <div class="small">
+            <%= new Date(sharedDate).toLocaleString() %>
+        </div>
+    </div>
+    <br>
+
+    <div class="thumbnail">
+        <div class="caption">
+            <p>
+                <%= textData %>
+            </p>
+        </div>
+        <% if (resizedImageData != null && resizedImageData != "pending") { %>
+            <img id ="resizedImage" src='<%= resizedImageData %>'>
+        <% } %>
+    </div>
+    <div class="btn-group">
+        <a href="#" class="btn btn-default" role="button">Comment</a>
+        <% if (myPost == true) { %>
+            <a href="#" id="deletePost" class="btn btn-primary" role="button">Delete</a>
+            <a href="#" class="btn btn-default" role="button">Share</a>
+        <% } %>
+
+    </div>
+</div>

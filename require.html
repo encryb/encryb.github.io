@@ -1,0 +1,74 @@
+<html>
+
+<head>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <link rel="stylesheet" href="css/bootstrap.css">
+    <link rel="stylesheet" href="css/jasny-bootstrap.css">
+    <link rel="stylesheet" href="css/backbone-forms-bootstrap3.css">
+    <link rel="stylesheet" href="css/custom.css">
+
+</head>
+<body>
+<div id="container" class="container">
+    <div class="page-header">
+        <h1>Encryb <small>Private social network</small></h1>
+
+    </div>
+
+    <div class="row">
+        <div class="col-lg-2">
+            <a href="#" id="addFriend" class="btn btn-default" role="button">Add Friend</a>
+            <a href="#" id="myInfo" class="btn btn-default" role="button">My Info</a>
+            <h3>Friends</h3>
+            <div id="friends"></div>
+        </div>
+        <div class="col-lg-7">
+            <section id="posts">
+                <header id="header">
+                    <button id="newPostButton" data-toggle="collapse" href="#newPostForm" type="submit" class="btn btn-default">New Post</button>
+                    <p/>
+
+                    <form id="newPostForm" class="form-horizontal collapse" role="form">
+                        <div>
+                            <textarea id="newPostText" class="form-control newPost" rows="5" autofocus></textarea>
+                        </div>
+                        <div class="fileinput fileinput-new" data-provides="fileinput">
+                            <div class="img_container">
+                                <div id="newPostImage" class="fileinput-preview fileinput-exists thumbnail" data-trigger="fileinput"></div>
+                                <button id="removeImage" type="button" class="btn btn-default btn-lg img_remove fileinput-exists" data-dismiss="fileinput">
+                                    <span class="glyphicon glyphicon-remove-circle"></span>
+                                </button>
+                            </div>
+
+                            <div class="btn-toolbar">
+                                <span class="btn btn-default btn-file fileinput-new">
+                                    <span class="fileinput-new">Add image</span><input type="file">
+                                </span>
+                                <button id="submitButton" type="submit" class="btn pull-right">Submit</button>
+                            </div>
+
+                        </div>
+                    </form>
+                </header>
+                <section id="main">
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs">
+                        <li><a href="#myPosts" data-toggle="tab">My Posts</a></li>
+                        <li class="active"><a href="#friendsPosts" data-toggle="tab">Friends' Posts</a></li>
+                    </ul>
+
+                    <!-- Tab panes -->
+                    <div class="tab-content">
+                        <div class="tab-pane" id="myPosts"><ul id="content"></ul></div>
+                        <div class="tab-pane active" id="friendsPosts"><ul id="otherContent"></ul></div>
+                    </div>
+                </section>
+                <footer id="footer"></footer>
+            </section>
+
+        </div>
+    </div>
+</div>
+<script data-main="js/app" src="require.js"></script>
+</body>
+</html>
