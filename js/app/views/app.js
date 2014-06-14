@@ -27,11 +27,12 @@ define([
     var AppView = Backbone.View.extend({
 
         initialize: function() {
-            this.listenTo(profiles, 'sync', this.onProfileSync);
+            this.listenTo(profiles, 'sync', function() {myPosts.fetch()});
+            this.listenTo(myPosts, 'sync', this.onProfileSync);
+
             this.listenTo(friends, 'add', this.addFriendsPosts);
 
             profiles.fetch();
-            myPosts.fetch();
             friends.fetch();
 
             this.newPostText = $("#newPostText");
