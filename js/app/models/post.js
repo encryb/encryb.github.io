@@ -11,9 +11,6 @@ define([
 
         defaults: {
             // persisted
-            textUrl: null,
-            resizedImageUrl: null,
-            fullImageUrl: null,
             created: null,
             sharedDate: null,
             password: null,
