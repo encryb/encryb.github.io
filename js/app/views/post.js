@@ -12,19 +12,32 @@ define([
         template: _.template( PostTemplate ),
 
         initialize: function() {
-            this.listenTo(this.model, 'change', this.render);
+            this.updateJson();
+            this.listenTo(this.model, 'change', this.updateJsonAndRender);
             this.model.fetchPost(false);
         },
 
-        render: function() {
-            var model = this.model.toJSON({full:true});
+        updateJsonAndRender: function() {
+            this.updateJson();
+            this.render();
+        },
+
+        updateJson: function(){
+            var json = this.model.toJSON({full:true});
             if('profilePictureUrl' in this.options) {
-                model['profilePictureUrl'] = this.options['profilePictureUrl'];
+                json['profilePictureUrl'] = this.options['profilePictureUrl'];
             }
             if ('myPost' in this.options) {
-                model['myPost'] = this.options['myPost'];
+                json['myPost'] = this.options['myPost'];
             }
-            this.$el.html( this.template( model ) );
+
+            this.json = json;
+
+        },
+
+        render: function() {
+
+            this.$el.html( this.template( this.json ) );
             return this;
         },
 

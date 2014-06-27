@@ -21,6 +21,9 @@ d.encode = function(dict) {
     var size = 1;
     var numItems = 0;
     for (var label in dict) {
+        if (!(label in labelToIndex)) {
+            continue;
+        }
         size += 5; //1 byte for key, 4 bytes for size
         size += dict[label].length;
         numItems ++;
@@ -33,6 +36,9 @@ d.encode = function(dict) {
     offset++;
 
     for (var label in dict) {
+        if (!(label in labelToIndex)) {
+            continue;
+        }
         var index = labelToIndex[label]
         view.setUint8(offset, index);
         var data;

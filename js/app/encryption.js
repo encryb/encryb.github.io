@@ -7,9 +7,12 @@ define([
 
     var exports = {};
 
+
     exports.encryptWithPassword = function(password, mimeType, data) {
 
-        var encryptedData = Sjcl.encrypt(password, data);
+        var encrypted = Sjcl.json._encrypt(password, data);
+
+        var encryptedData = encode(encrypted);
         encryptedData['mimeType'] = mimeType;
 
         var buf = Encoding.encode(encryptedData);
@@ -17,6 +20,13 @@ define([
         return buf;
     }
 
+    exports.encryptImageWithPassword = function(password, mimeType, data) {
+        var bits = Sjcl.codec.bytes.toBits(data);
+        return exports.encryptWithPassword(password, mimeType, bits);
+    }
+
+
+    /*
     exports.encryptWithPublicKey = function(mimeType, data) {
 
         var key = exports.getKeys().publicKey;
@@ -51,12 +61,19 @@ define([
             secretKey: key.sec
         };
     }
+    */
 
 
     exports.decryptImageData = function(packedData, password) {
         var data = Encoding.decode(packedData);
+        var encData = decode(data);
+        var bitPassword = Sjcl.codec.bytes.toBits(password);
 
-        var decrypted = Sjcl.decrypt(password, data, true);
+
+        var ct = Sjcl.json._decrypt(bitPassword, encData);
+
+        var decrypted = Sjcl.codec.bytes.fromBits(ct);
+
         var imageData = "data:" +  data.mimeType + ";base64," + DataConvert.arrayToBase64(decrypted);
         return imageData;
     }
@@ -64,15 +81,25 @@ define([
     exports.decryptTextData = function(packedData, password) {
         var data = Encoding.decode(packedData);
 
-        var decrypted = Sjcl.decrypt(password, data, false);
+        var encData = decode(data);
+
+        var bitPassword = Sjcl.codec.bytes.toBits(password);
+
+        var ct = Sjcl.json._decrypt(bitPassword, encData);
+
+        var decrypted = Sjcl.codec.utf8String.fromBits(ct);
         return decrypted;
     }
 
 
     exports.decryptBinaryData = function(packedData, password) {
         var data = Encoding.decode(packedData);
+        var encData = decode(data);
+        var bitPassword = Sjcl.codec.bytes.toBits(password);
 
-        var decrypted = Sjcl.decrypt(password, data, 55);
+        var ct = Sjcl.json._decrypt(bitPassword, encData);
+
+        var decrypted = fromBitsToTypedArray(ct);
         return decrypted;
     }
 
@@ -80,6 +107,59 @@ define([
         var randomBytes = Sjcl.random.randomWords(16,1);
         var randomString = Sjcl.codec.base64.fromBits(randomBytes);
         return randomString;
+    }
+
+    /*
+    if (returnBytes == 55) {
+        return sjcl.codec.bytes.fromBitsToTypedArray(ct);
+    }
+
+    if (returnBytes == true) {
+        return sjcl.codec.bytes.fromBits(ct);
+    }
+    return sjcl.codec.utf8String.fromBits(ct);
+
+     */
+
+
+    function encode(obj) {
+        var result = {};
+        if (obj.kemtag) {
+            result['kemtag'] = fromBitsToTypedArray(obj.kemtag);
+        }
+        if (obj.salt) {
+            result['salt'] = fromBitsToTypedArray(obj.salt);
+        }
+        result['iv'] = fromBitsToTypedArray(obj.iv);
+        result['ct'] = fromBitsToTypedArray(obj.ct);
+        return result;
+    }
+
+    function decode(obj) {
+        var result = {};
+        if (obj.kemtag) {
+            result['kemtag'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.kemtag));
+        }
+        if (obj.salt) {
+            result['salt'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.salt));
+        }
+        result['iv'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.iv));
+        result['ct'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.ct));
+        return result;
+
+    }
+
+    function fromBitsToTypedArray(arr) {
+        var bl = Sjcl.bitArray.bitLength(arr), i, tmp;
+        var out = new Uint8Array(bl/8);
+        for (i=0; i<bl/8; i++) {
+            if ((i&3) === 0) {
+                tmp = arr[i/4];
+            }
+            out[i] = (tmp >>> 24);
+            tmp <<= 8;
+        }
+        return out;
     }
 
 

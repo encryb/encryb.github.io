@@ -39,7 +39,6 @@ exports.uploadDropbox = function(path, data) {
             console.log(error);
         } else {
             deferred.resolve(stats);
-            console.log(stats);
         }
     });
     return deferred;

@@ -31,6 +31,7 @@ define([
             this.listenTo(myPosts, 'sync', this.onProfileSync);
 
             this.listenTo(friends, 'add', this.addFriendsPosts);
+            this.listenTo(myPosts, 'add', function(obo){console.log(obo)});
 
             profiles.fetch();
             friends.fetch();
@@ -72,6 +73,7 @@ define([
                 modelViewOptions: {myPost: true, profilePictureUrl: profilePictureUrl},
                 emptyListCaption: "Empty!"
             } );
+
             collectionView.render();
 
         },
@@ -176,7 +178,7 @@ define([
             var p = new Uint8Array(packedManifest);
 
             console.log(manifest);
-            var encText = Encryption.encryptWithPassword("global",  "plain/text", p);
+            var encText = Encryption.encryptImageWithPassword("global",  "plain/text", p);
 
             Storage.uploadDropbox(path, encText).done(function(stats) {
                 deferred.resolve(stats);
@@ -211,9 +213,10 @@ define([
             var appView = this;
             post.uploadPost().done(function() {
                 var form = $("#newPostForm");
-                form[0].reset();
+                form.trigger('reset');
                 form.removeClass("in");
-                myPosts.create(post);
+                myPosts.add(post);
+                post.save();
                 appView.saveManifests();
 
             });

@@ -258,7 +258,18 @@
 
     // Using to convert returned Dropbox Datastore records to JSON
     recordToJson: function(record) {
-      return _.extend(record.getFields(), {
+      var fields = record.getFields();
+
+      var json = {};
+      _.each(fields, function(field, key) {
+          if (field instanceof Backbone.Dropbox.Datastore.List) {
+              json[key] = field.toArray();
+          }
+          else {
+              json[key] = field;
+          }
+      });
+      return _.extend(json, {
         id: record.getId()
       });
     },

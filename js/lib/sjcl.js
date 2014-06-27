@@ -10,7 +10,12 @@
 
 "use strict";
 /*jslint indent: 2, bitwise: false, nomen: false, plusplus: false, white: false, regexp: false */
-/*global document, window, escape, unescape */
+/*global document, window, escape, unescape, module, require, Uint32Array */
+
+/* changes :
+_decrypt returns ct, not utf8 version of CT.
+default parameters changed.
+ */
 
 /** @namespace The Stanford Javascript Crypto Library, top-level namespace. */
 var sjcl = {
@@ -68,7 +73,7 @@ var sjcl = {
   }
 };
 
-if(typeof module != 'undefined' && module.exports){
+if(typeof module !== 'undefined' && module.exports){
   module.exports = sjcl;
 }
 /** @fileOverview Low-level AES implementation.
@@ -355,7 +360,7 @@ sjcl.bitArray = {
       return a1.concat(a2);
     }
     
-    var out, i, last = a1[a1.length-1], shift = sjcl.bitArray.getPartial(last);
+    var last = a1[a1.length-1], shift = sjcl.bitArray.getPartial(last);
     if (shift === 32) {
       return a1.concat(a2);
     } else {
@@ -516,7 +521,7 @@ sjcl.codec.utf8String = {
 sjcl.codec.hex = {
   /** Convert from a bitArray to a hex string. */
   fromBits: function (arr) {
-    var out = "", i, x;
+    var out = "", i;
     for (i=0; i<arr.length; i++) {
       out += ((arr[i]|0)+0xF00000000000).toString(16).substr(4);
     }
@@ -552,7 +557,9 @@ sjcl.codec.base64 = {
   /** Convert from a bitArray to a base64 string. */
   fromBits: function (arr, _noEquals, _url) {
     var out = "", i, bits=0, c = sjcl.codec.base64._chars, ta=0, bl = sjcl.bitArray.bitLength(arr);
-    if (_url) c = c.substr(0,62) + '-_';
+    if (_url) {
+      c = c.substr(0,62) + '-_';
+    }
     for (i=0; out.length * 6 < bl; ) {
       out += c.charAt((ta ^ arr[i]>>>bits) >>> 26);
       if (bits < 6) {
@@ -572,7 +579,9 @@ sjcl.codec.base64 = {
   toBits: function(str, _url) {
     str = str.replace(/\s|=/g,'');
     var out = [], i, bits=0, c = sjcl.codec.base64._chars, ta=0, x;
-    if (_url) c = c.substr(0,62) + '-_';
+    if (_url) {
+      c = c.substr(0,62) + '-_';
+    }
     for (i=0; i<str.length; i++) {
       x = c.indexOf(str.charAt(i));
       if (x < 0) {
@@ -615,18 +624,6 @@ sjcl.codec.bytes = {
         tmp = arr[i/4];
       }
       out.push(tmp >>> 24);
-      tmp <<= 8;
-    }
-    return out;
-  },
-  fromBitsToTypedArray: function (arr) {
-    var bl = sjcl.bitArray.bitLength(arr), i, tmp;
-    var out = new Uint8Array(bl/8);
-    for (i=0; i<bl/8; i++) {
-      if ((i&3) === 0) {
-        tmp = arr[i/4];
-      }
-      out[i] = (tmp >>> 24);
       tmp <<= 8;
     }
     return out;
@@ -863,6 +860,518 @@ sjcl.hash.sha256.prototype = {
 };
 
 
+/** @fileOverview Javascript SHA-512 implementation.
+ *
+ * This implementation was written for CryptoJS by Jeff Mott and adapted for
+ * SJCL by Stefan Thomas.
+ *
+ * CryptoJS (c) 2009–2012 by Jeff Mott. All rights reserved.
+ * Released with New BSD License
+ *
+ * @author Emily Stark
+ * @author Mike Hamburg
+ * @author Dan Boneh
+ * @author Jeff Mott
+ * @author Stefan Thomas
+ */
+
+/**
+ * Context for a SHA-512 operation in progress.
+ * @constructor
+ * @class Secure Hash Algorithm, 512 bits.
+ */
+sjcl.hash.sha512 = function (hash) {
+  if (!this._key[0]) { this._precompute(); }
+  if (hash) {
+    this._h = hash._h.slice(0);
+    this._buffer = hash._buffer.slice(0);
+    this._length = hash._length;
+  } else {
+    this.reset();
+  }
+};
+
+/**
+ * Hash a string or an array of words.
+ * @static
+ * @param {bitArray|String} data the data to hash.
+ * @return {bitArray} The hash value, an array of 16 big-endian words.
+ */
+sjcl.hash.sha512.hash = function (data) {
+  return (new sjcl.hash.sha512()).update(data).finalize();
+};
+
+sjcl.hash.sha512.prototype = {
+  /**
+   * The hash's block size, in bits.
+   * @constant
+   */
+  blockSize: 1024,
+   
+  /**
+   * Reset the hash state.
+   * @return this
+   */
+  reset:function () {
+    this._h = this._init.slice(0);
+    this._buffer = [];
+    this._length = 0;
+    return this;
+  },
+  
+  /**
+   * Input several words to the hash.
+   * @param {bitArray|String} data the data to hash.
+   * @return this
+   */
+  update: function (data) {
+    if (typeof data === "string") {
+      data = sjcl.codec.utf8String.toBits(data);
+    }
+    var i, b = this._buffer = sjcl.bitArray.concat(this._buffer, data),
+        ol = this._length,
+        nl = this._length = ol + sjcl.bitArray.bitLength(data);
+    for (i = 1024+ol & -1024; i <= nl; i+= 1024) {
+      this._block(b.splice(0,32));
+    }
+    return this;
+  },
+  
+  /**
+   * Complete hashing and output the hash value.
+   * @return {bitArray} The hash value, an array of 16 big-endian words.
+   */
+  finalize:function () {
+    var i, b = this._buffer, h = this._h;
+
+    // Round out and push the buffer
+    b = sjcl.bitArray.concat(b, [sjcl.bitArray.partial(1,1)]);
+
+    // Round out the buffer to a multiple of 32 words, less the 4 length words.
+    for (i = b.length + 4; i & 31; i++) {
+      b.push(0);
+    }
+
+    // append the length
+    b.push(0);
+    b.push(0);
+    b.push(Math.floor(this._length / 0x100000000));
+    b.push(this._length | 0);
+
+    while (b.length) {
+      this._block(b.splice(0,32));
+    }
+
+    this.reset();
+    return h;
+  },
+
+  /**
+   * The SHA-512 initialization vector, to be precomputed.
+   * @private
+   */
+  _init:[],
+
+  /**
+   * Least significant 24 bits of SHA512 initialization values.
+   *
+   * Javascript only has 53 bits of precision, so we compute the 40 most
+   * significant bits and add the remaining 24 bits as constants.
+   *
+   * @private
+   */
+  _initr: [ 0xbcc908, 0xcaa73b, 0x94f82b, 0x1d36f1, 0xe682d1, 0x3e6c1f, 0x41bd6b, 0x7e2179 ],
+
+  /*
+  _init:
+  [0x6a09e667, 0xf3bcc908, 0xbb67ae85, 0x84caa73b, 0x3c6ef372, 0xfe94f82b, 0xa54ff53a, 0x5f1d36f1,
+   0x510e527f, 0xade682d1, 0x9b05688c, 0x2b3e6c1f, 0x1f83d9ab, 0xfb41bd6b, 0x5be0cd19, 0x137e2179],
+  */
+
+  /**
+   * The SHA-512 hash key, to be precomputed.
+   * @private
+   */
+  _key:[],
+
+  /**
+   * Least significant 24 bits of SHA512 key values.
+   * @private
+   */
+  _keyr:
+  [0x28ae22, 0xef65cd, 0x4d3b2f, 0x89dbbc, 0x48b538, 0x05d019, 0x194f9b, 0x6d8118,
+   0x030242, 0x706fbe, 0xe4b28c, 0xffb4e2, 0x7b896f, 0x1696b1, 0xc71235, 0x692694,
+   0xf14ad2, 0x4f25e3, 0x8cd5b5, 0xac9c65, 0x2b0275, 0xa6e483, 0x41fbd4, 0x1153b5,
+   0x66dfab, 0xb43210, 0xfb213f, 0xef0ee4, 0xa88fc2, 0x0aa725, 0x03826f, 0x0e6e70,
+   0xd22ffc, 0x26c926, 0xc42aed, 0x95b3df, 0xaf63de, 0x77b2a8, 0xedaee6, 0x82353b,
+   0xf10364, 0x423001, 0xf89791, 0x54be30, 0xef5218, 0x65a910, 0x71202a, 0xbbd1b8,
+   0xd2d0c8, 0x41ab53, 0x8eeb99, 0x9b48a8, 0xc95a63, 0x418acb, 0x63e373, 0xb2b8a3,
+   0xefb2fc, 0x172f60, 0xf0ab72, 0x6439ec, 0x631e28, 0x82bde9, 0xc67915, 0x72532b,
+   0x26619c, 0xc0c207, 0xe0eb1e, 0x6ed178, 0x176fba, 0xc898a6, 0xf90dae, 0x1c471b,
+   0x047d84, 0xc72493, 0xc9bebc, 0x100d4c, 0x3e42b6, 0x657e2a, 0xd6faec, 0x475817],
+
+  /*
+  _key:
+  [0x428a2f98, 0xd728ae22, 0x71374491, 0x23ef65cd, 0xb5c0fbcf, 0xec4d3b2f, 0xe9b5dba5, 0x8189dbbc,
+   0x3956c25b, 0xf348b538, 0x59f111f1, 0xb605d019, 0x923f82a4, 0xaf194f9b, 0xab1c5ed5, 0xda6d8118,
+   0xd807aa98, 0xa3030242, 0x12835b01, 0x45706fbe, 0x243185be, 0x4ee4b28c, 0x550c7dc3, 0xd5ffb4e2,
+   0x72be5d74, 0xf27b896f, 0x80deb1fe, 0x3b1696b1, 0x9bdc06a7, 0x25c71235, 0xc19bf174, 0xcf692694,
+   0xe49b69c1, 0x9ef14ad2, 0xefbe4786, 0x384f25e3, 0x0fc19dc6, 0x8b8cd5b5, 0x240ca1cc, 0x77ac9c65,
+   0x2de92c6f, 0x592b0275, 0x4a7484aa, 0x6ea6e483, 0x5cb0a9dc, 0xbd41fbd4, 0x76f988da, 0x831153b5,
+   0x983e5152, 0xee66dfab, 0xa831c66d, 0x2db43210, 0xb00327c8, 0x98fb213f, 0xbf597fc7, 0xbeef0ee4,
+   0xc6e00bf3, 0x3da88fc2, 0xd5a79147, 0x930aa725, 0x06ca6351, 0xe003826f, 0x14292967, 0x0a0e6e70,
+   0x27b70a85, 0x46d22ffc, 0x2e1b2138, 0x5c26c926, 0x4d2c6dfc, 0x5ac42aed, 0x53380d13, 0x9d95b3df,
+   0x650a7354, 0x8baf63de, 0x766a0abb, 0x3c77b2a8, 0x81c2c92e, 0x47edaee6, 0x92722c85, 0x1482353b,
+   0xa2bfe8a1, 0x4cf10364, 0xa81a664b, 0xbc423001, 0xc24b8b70, 0xd0f89791, 0xc76c51a3, 0x0654be30,
+   0xd192e819, 0xd6ef5218, 0xd6990624, 0x5565a910, 0xf40e3585, 0x5771202a, 0x106aa070, 0x32bbd1b8,
+   0x19a4c116, 0xb8d2d0c8, 0x1e376c08, 0x5141ab53, 0x2748774c, 0xdf8eeb99, 0x34b0bcb5, 0xe19b48a8,
+   0x391c0cb3, 0xc5c95a63, 0x4ed8aa4a, 0xe3418acb, 0x5b9cca4f, 0x7763e373, 0x682e6ff3, 0xd6b2b8a3,
+   0x748f82ee, 0x5defb2fc, 0x78a5636f, 0x43172f60, 0x84c87814, 0xa1f0ab72, 0x8cc70208, 0x1a6439ec,
+   0x90befffa, 0x23631e28, 0xa4506ceb, 0xde82bde9, 0xbef9a3f7, 0xb2c67915, 0xc67178f2, 0xe372532b,
+   0xca273ece, 0xea26619c, 0xd186b8c7, 0x21c0c207, 0xeada7dd6, 0xcde0eb1e, 0xf57d4f7f, 0xee6ed178,
+   0x06f067aa, 0x72176fba, 0x0a637dc5, 0xa2c898a6, 0x113f9804, 0xbef90dae, 0x1b710b35, 0x131c471b,
+   0x28db77f5, 0x23047d84, 0x32caab7b, 0x40c72493, 0x3c9ebe0a, 0x15c9bebc, 0x431d67c4, 0x9c100d4c,
+   0x4cc5d4be, 0xcb3e42b6, 0x597f299c, 0xfc657e2a, 0x5fcb6fab, 0x3ad6faec, 0x6c44198c, 0x4a475817],
+  */
+
+  /**
+   * Function to precompute _init and _key.
+   * @private
+   */
+  _precompute: function () {
+    // XXX: This code is for precomputing the SHA256 constants, change for
+    //      SHA512 and re-enable.
+    var i = 0, prime = 2, factor;
+
+    function frac(x)  { return (x-Math.floor(x)) * 0x100000000 | 0; }
+    function frac2(x) { return (x-Math.floor(x)) * 0x10000000000 & 0xff; }
+
+    outer: for (; i<80; prime++) {
+      for (factor=2; factor*factor <= prime; factor++) {
+        if (prime % factor === 0) {
+          // not a prime
+          continue outer;
+        }
+      }
+
+      if (i<8) {
+        this._init[i*2] = frac(Math.pow(prime, 1/2));
+        this._init[i*2+1] = (frac2(Math.pow(prime, 1/2)) << 24) | this._initr[i];
+      }
+      this._key[i*2] = frac(Math.pow(prime, 1/3));
+      this._key[i*2+1] = (frac2(Math.pow(prime, 1/3)) << 24) | this._keyr[i];
+      i++;
+    }
+  },
+
+  /**
+   * Perform one cycle of SHA-512.
+   * @param {bitArray} words one block of words.
+   * @private
+   */
+  _block:function (words) {
+    var i, wrh, wrl,
+        w = words.slice(0),
+        h = this._h,
+        k = this._key,
+        h0h = h[ 0], h0l = h[ 1], h1h = h[ 2], h1l = h[ 3],
+        h2h = h[ 4], h2l = h[ 5], h3h = h[ 6], h3l = h[ 7],
+        h4h = h[ 8], h4l = h[ 9], h5h = h[10], h5l = h[11],
+        h6h = h[12], h6l = h[13], h7h = h[14], h7l = h[15];
+
+    // Working variables
+    var ah = h0h, al = h0l, bh = h1h, bl = h1l,
+        ch = h2h, cl = h2l, dh = h3h, dl = h3l,
+        eh = h4h, el = h4l, fh = h5h, fl = h5l,
+        gh = h6h, gl = h6l, hh = h7h, hl = h7l;
+
+    for (i=0; i<80; i++) {
+      // load up the input word for this round
+      if (i<16) {
+        wrh = w[i * 2];
+        wrl = w[i * 2 + 1];
+      } else {
+        // Gamma0
+        var gamma0xh = w[(i-15) * 2];
+        var gamma0xl = w[(i-15) * 2 + 1];
+        var gamma0h =
+          ((gamma0xl << 31) | (gamma0xh >>> 1)) ^
+          ((gamma0xl << 24) | (gamma0xh >>> 8)) ^
+           (gamma0xh >>> 7);
+        var gamma0l =
+          ((gamma0xh << 31) | (gamma0xl >>> 1)) ^
+          ((gamma0xh << 24) | (gamma0xl >>> 8)) ^
+          ((gamma0xh << 25) | (gamma0xl >>> 7));
+
+        // Gamma1
+        var gamma1xh = w[(i-2) * 2];
+        var gamma1xl = w[(i-2) * 2 + 1];
+        var gamma1h =
+          ((gamma1xl << 13) | (gamma1xh >>> 19)) ^
+          ((gamma1xh << 3)  | (gamma1xl >>> 29)) ^
+           (gamma1xh >>> 6);
+        var gamma1l =
+          ((gamma1xh << 13) | (gamma1xl >>> 19)) ^
+          ((gamma1xl << 3)  | (gamma1xh >>> 29)) ^
+          ((gamma1xh << 26) | (gamma1xl >>> 6));
+
+        // Shortcuts
+        var wr7h = w[(i-7) * 2];
+        var wr7l = w[(i-7) * 2 + 1];
+
+        var wr16h = w[(i-16) * 2];
+        var wr16l = w[(i-16) * 2 + 1];
+
+        // W(round) = gamma0 + W(round - 7) + gamma1 + W(round - 16)
+        wrl = gamma0l + wr7l;
+        wrh = gamma0h + wr7h + ((wrl >>> 0) < (gamma0l >>> 0) ? 1 : 0);
+        wrl += gamma1l;
+        wrh += gamma1h + ((wrl >>> 0) < (gamma1l >>> 0) ? 1 : 0);
+        wrl += wr16l;
+        wrh += wr16h + ((wrl >>> 0) < (wr16l >>> 0) ? 1 : 0);
+      }
+
+      w[i*2]     = wrh |= 0;
+      w[i*2 + 1] = wrl |= 0;
+
+      // Ch
+      var chh = (eh & fh) ^ (~eh & gh);
+      var chl = (el & fl) ^ (~el & gl);
+
+      // Maj
+      var majh = (ah & bh) ^ (ah & ch) ^ (bh & ch);
+      var majl = (al & bl) ^ (al & cl) ^ (bl & cl);
+
+      // Sigma0
+      var sigma0h = ((al << 4) | (ah >>> 28)) ^ ((ah << 30) | (al >>> 2)) ^ ((ah << 25) | (al >>> 7));
+      var sigma0l = ((ah << 4) | (al >>> 28)) ^ ((al << 30) | (ah >>> 2)) ^ ((al << 25) | (ah >>> 7));
+
+      // Sigma1
+      var sigma1h = ((el << 18) | (eh >>> 14)) ^ ((el << 14) | (eh >>> 18)) ^ ((eh << 23) | (el >>> 9));
+      var sigma1l = ((eh << 18) | (el >>> 14)) ^ ((eh << 14) | (el >>> 18)) ^ ((el << 23) | (eh >>> 9));
+
+      // K(round)
+      var krh = k[i*2];
+      var krl = k[i*2+1];
+
+      // t1 = h + sigma1 + ch + K(round) + W(round)
+      var t1l = hl + sigma1l;
+      var t1h = hh + sigma1h + ((t1l >>> 0) < (hl >>> 0) ? 1 : 0);
+      t1l += chl;
+      t1h += chh + ((t1l >>> 0) < (chl >>> 0) ? 1 : 0);
+      t1l += krl;
+      t1h += krh + ((t1l >>> 0) < (krl >>> 0) ? 1 : 0);
+      t1l += wrl;
+      t1h += wrh + ((t1l >>> 0) < (wrl >>> 0) ? 1 : 0);
+
+      // t2 = sigma0 + maj
+      var t2l = sigma0l + majl;
+      var t2h = sigma0h + majh + ((t2l >>> 0) < (sigma0l >>> 0) ? 1 : 0);
+
+      // Update working variables
+      hh = gh;
+      hl = gl;
+      gh = fh;
+      gl = fl;
+      fh = eh;
+      fl = el;
+      el = (dl + t1l) | 0;
+      eh = (dh + t1h + ((el >>> 0) < (dl >>> 0) ? 1 : 0)) | 0;
+      dh = ch;
+      dl = cl;
+      ch = bh;
+      cl = bl;
+      bh = ah;
+      bl = al;
+      al = (t1l + t2l) | 0;
+      ah = (t1h + t2h + ((al >>> 0) < (t1l >>> 0) ? 1 : 0)) | 0;
+    }
+
+    // Intermediate hash
+    h0l = h[1] = (h0l + al) | 0;
+    h[0] = (h0h + ah + ((h0l >>> 0) < (al >>> 0) ? 1 : 0)) | 0;
+    h1l = h[3] = (h1l + bl) | 0;
+    h[2] = (h1h + bh + ((h1l >>> 0) < (bl >>> 0) ? 1 : 0)) | 0;
+    h2l = h[5] = (h2l + cl) | 0;
+    h[4] = (h2h + ch + ((h2l >>> 0) < (cl >>> 0) ? 1 : 0)) | 0;
+    h3l = h[7] = (h3l + dl) | 0;
+    h[6] = (h3h + dh + ((h3l >>> 0) < (dl >>> 0) ? 1 : 0)) | 0;
+    h4l = h[9] = (h4l + el) | 0;
+    h[8] = (h4h + eh + ((h4l >>> 0) < (el >>> 0) ? 1 : 0)) | 0;
+    h5l = h[11] = (h5l + fl) | 0;
+    h[10] = (h5h + fh + ((h5l >>> 0) < (fl >>> 0) ? 1 : 0)) | 0;
+    h6l = h[13] = (h6l + gl) | 0;
+    h[12] = (h6h + gh + ((h6l >>> 0) < (gl >>> 0) ? 1 : 0)) | 0;
+    h7l = h[15] = (h7l + hl) | 0;
+    h[14] = (h7h + hh + ((h7l >>> 0) < (hl >>> 0) ? 1 : 0)) | 0;
+  }
+};
+
+
+/** @fileOverview Javascript SHA-1 implementation.
+ *
+ * Based on the implementation in RFC 3174, method 1, and on the SJCL
+ * SHA-256 implementation.
+ *
+ * @author Quinn Slack
+ */
+
+/**
+ * Context for a SHA-1 operation in progress.
+ * @constructor
+ * @class Secure Hash Algorithm, 160 bits.
+ */
+sjcl.hash.sha1 = function (hash) {
+  if (hash) {
+    this._h = hash._h.slice(0);
+    this._buffer = hash._buffer.slice(0);
+    this._length = hash._length;
+  } else {
+    this.reset();
+  }
+};
+
+/**
+ * Hash a string or an array of words.
+ * @static
+ * @param {bitArray|String} data the data to hash.
+ * @return {bitArray} The hash value, an array of 5 big-endian words.
+ */
+sjcl.hash.sha1.hash = function (data) {
+  return (new sjcl.hash.sha1()).update(data).finalize();
+};
+
+sjcl.hash.sha1.prototype = {
+  /**
+   * The hash's block size, in bits.
+   * @constant
+   */
+  blockSize: 512,
+   
+  /**
+   * Reset the hash state.
+   * @return this
+   */
+  reset:function () {
+    this._h = this._init.slice(0);
+    this._buffer = [];
+    this._length = 0;
+    return this;
+  },
+  
+  /**
+   * Input several words to the hash.
+   * @param {bitArray|String} data the data to hash.
+   * @return this
+   */
+  update: function (data) {
+    if (typeof data === "string") {
+      data = sjcl.codec.utf8String.toBits(data);
+    }
+    var i, b = this._buffer = sjcl.bitArray.concat(this._buffer, data),
+        ol = this._length,
+        nl = this._length = ol + sjcl.bitArray.bitLength(data);
+    for (i = this.blockSize+ol & -this.blockSize; i <= nl;
+         i+= this.blockSize) {
+      this._block(b.splice(0,16));
+    }
+    return this;
+  },
+  
+  /**
+   * Complete hashing and output the hash value.
+   * @return {bitArray} The hash value, an array of 5 big-endian words. TODO
+   */
+  finalize:function () {
+    var i, b = this._buffer, h = this._h;
+
+    // Round out and push the buffer
+    b = sjcl.bitArray.concat(b, [sjcl.bitArray.partial(1,1)]);
+    // Round out the buffer to a multiple of 16 words, less the 2 length words.
+    for (i = b.length + 2; i & 15; i++) {
+      b.push(0);
+    }
+
+    // append the length
+    b.push(Math.floor(this._length / 0x100000000));
+    b.push(this._length | 0);
+
+    while (b.length) {
+      this._block(b.splice(0,16));
+    }
+
+    this.reset();
+    return h;
+  },
+
+  /**
+   * The SHA-1 initialization vector.
+   * @private
+   */
+  _init:[0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0],
+
+  /**
+   * The SHA-1 hash key.
+   * @private
+   */
+  _key:[0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xCA62C1D6],
+
+  /**
+   * The SHA-1 logical functions f(0), f(1), ..., f(79).
+   * @private
+   */
+  _f:function(t, b, c, d) {
+    if (t <= 19) {
+      return (b & c) | (~b & d);
+    } else if (t <= 39) {
+      return b ^ c ^ d;
+    } else if (t <= 59) {
+      return (b & c) | (b & d) | (c & d);
+    } else if (t <= 79) {
+      return b ^ c ^ d;
+    }
+  },
+
+  /**
+   * Circular left-shift operator.
+   * @private
+   */
+  _S:function(n, x) {
+    return (x << n) | (x >>> 32-n);
+  },
+  
+  /**
+   * Perform one cycle of SHA-1.
+   * @param {bitArray} words one block of words.
+   * @private
+   */
+  _block:function (words) {  
+    var t, tmp, a, b, c, d, e,
+    w = words.slice(0),
+    h = this._h;
+   
+    a = h[0]; b = h[1]; c = h[2]; d = h[3]; e = h[4]; 
+
+    for (t=0; t<=79; t++) {
+      if (t >= 16) {
+        w[t] = this._S(1, w[t-3] ^ w[t-8] ^ w[t-14] ^ w[t-16]);
+      }
+      tmp = (this._S(5, a) + this._f(t, b, c, d) + e + w[t] +
+             this._key[Math.floor(t/20)]) | 0;
+      e = d;
+      d = c;
+      c = this._S(30, b);
+      b = a;
+      a = tmp;
+   }
+
+   h[0] = (h[0]+a) |0;
+   h[1] = (h[1]+b) |0;
+   h[2] = (h[2]+c) |0;
+   h[3] = (h[3]+d) |0;
+   h[4] = (h[4]+e) |0;
+  }
+};
 /** @fileOverview CCM mode implementation.
  *
  * Special thanks to Roy Nicholson for pointing out a bug in our
@@ -890,7 +1399,7 @@ sjcl.mode.ccm = {
    * @return {bitArray} The encrypted data, an array of bytes.
    */
   encrypt: function(prf, plaintext, iv, adata, tlen) {
-    var L, i, out = plaintext.slice(0), tag, w=sjcl.bitArray, ivl = w.bitLength(iv) / 8, ol = w.bitLength(out) / 8;
+    var L, out = plaintext.slice(0), tag, w=sjcl.bitArray, ivl = w.bitLength(iv) / 8, ol = w.bitLength(out) / 8;
     tlen = tlen || 64;
     adata = adata || [];
     
@@ -924,7 +1433,7 @@ sjcl.mode.ccm = {
   decrypt: function(prf, ciphertext, iv, adata, tlen) {
     tlen = tlen || 64;
     adata = adata || [];
-    var L, i, 
+    var L,
         w=sjcl.bitArray,
         ivl = w.bitLength(iv) / 8,
         ol = w.bitLength(ciphertext), 
@@ -966,7 +1475,7 @@ sjcl.mode.ccm = {
    */
   _computeTag: function(prf, plaintext, iv, adata, tlen, L) {
     // compute B[0]
-    var q, mac, field = 0, offset = 24, tmp, i, macData = [], w=sjcl.bitArray, xor = w._xor4;
+    var mac, tmp, i, macData = [], w=sjcl.bitArray, xor = w._xor4;
 
     tlen /= 8;
   
@@ -1026,7 +1535,7 @@ sjcl.mode.ccm = {
    * @private
    */
   _ctrMode: function(prf, data, iv, tag, tlen, L) {
-    var enc, i, w=sjcl.bitArray, xor = w._xor4, ctr, b, l = data.length, bl=w.bitLength(data);
+    var enc, i, w=sjcl.bitArray, xor = w._xor4, ctr, l = data.length, bl=w.bitLength(data);
 
     // start the ctr
     ctr = w.concat([w.partial(8,L-1)],iv).concat([0,0,0]).slice(0,4);
@@ -1047,6 +1556,121 @@ sjcl.mode.ccm = {
     }
     return { tag:tag, data:w.clamp(data,bl) };
   }
+};
+/** @fileOverview CBC mode implementation
+ *
+ * @author Emily Stark
+ * @author Mike Hamburg
+ * @author Dan Boneh
+ */
+
+if (sjcl.beware === undefined) {
+  sjcl.beware = {};
+}
+sjcl.beware["CBC mode is dangerous because it doesn't protect message integrity."
+] = function() {
+  /** @namespace
+   * Dangerous: CBC mode with PKCS#5 padding.
+   *
+   * @author Emily Stark
+   * @author Mike Hamburg
+   * @author Dan Boneh
+   */
+  sjcl.mode.cbc = {
+    /** The name of the mode.
+     * @constant
+     */
+    name: "cbc",
+    
+    /** Encrypt in CBC mode with PKCS#5 padding.
+     * @param {Object} prp The block cipher.  It must have a block size of 16 bytes.
+     * @param {bitArray} plaintext The plaintext data.
+     * @param {bitArray} iv The initialization value.
+     * @param {bitArray} [adata=[]] The authenticated data.  Must be empty.
+     * @return The encrypted data, an array of bytes.
+     * @throws {sjcl.exception.invalid} if the IV isn't exactly 128 bits, or if any adata is specified.
+     */
+    encrypt: function(prp, plaintext, iv, adata) {
+      if (adata && adata.length) {
+        throw new sjcl.exception.invalid("cbc can't authenticate data");
+      }
+      if (sjcl.bitArray.bitLength(iv) !== 128) {
+        throw new sjcl.exception.invalid("cbc iv must be 128 bits");
+      }
+      var i,
+          w = sjcl.bitArray,
+          xor = w._xor4,
+          bl = w.bitLength(plaintext),
+          bp = 0,
+          output = [];
+
+      if (bl&7) {
+        throw new sjcl.exception.invalid("pkcs#5 padding only works for multiples of a byte");
+      }
+    
+      for (i=0; bp+128 <= bl; i+=4, bp+=128) {
+        /* Encrypt a non-final block */
+        iv = prp.encrypt(xor(iv, plaintext.slice(i,i+4)));
+        output.splice(i,0,iv[0],iv[1],iv[2],iv[3]);
+      }
+      
+      /* Construct the pad. */
+      bl = (16 - ((bl >> 3) & 15)) * 0x1010101;
+
+      /* Pad and encrypt. */
+      iv = prp.encrypt(xor(iv,w.concat(plaintext,[bl,bl,bl,bl]).slice(i,i+4)));
+      output.splice(i,0,iv[0],iv[1],iv[2],iv[3]);
+      return output;
+    },
+    
+    /** Decrypt in CBC mode.
+     * @param {Object} prp The block cipher.  It must have a block size of 16 bytes.
+     * @param {bitArray} ciphertext The ciphertext data.
+     * @param {bitArray} iv The initialization value.
+     * @param {bitArray} [adata=[]] The authenticated data.  It must be empty.
+     * @return The decrypted data, an array of bytes.
+     * @throws {sjcl.exception.invalid} if the IV isn't exactly 128 bits, or if any adata is specified.
+     * @throws {sjcl.exception.corrupt} if if the message is corrupt.
+     */
+    decrypt: function(prp, ciphertext, iv, adata) {
+      if (adata && adata.length) {
+        throw new sjcl.exception.invalid("cbc can't authenticate data");
+      }
+      if (sjcl.bitArray.bitLength(iv) !== 128) {
+        throw new sjcl.exception.invalid("cbc iv must be 128 bits");
+      }
+      if ((sjcl.bitArray.bitLength(ciphertext) & 127) || !ciphertext.length) {
+        throw new sjcl.exception.corrupt("cbc ciphertext must be a positive multiple of the block size");
+      }
+      var i,
+          w = sjcl.bitArray,
+          xor = w._xor4,
+          bi, bo,
+          output = [];
+          
+      adata = adata || [];
+    
+      for (i=0; i<ciphertext.length; i+=4) {
+        bi = ciphertext.slice(i,i+4);
+        bo = xor(iv,prp.decrypt(bi));
+        output.splice(i,0,bo[0],bo[1],bo[2],bo[3]);
+        iv = bi;
+      }
+
+      /* check and remove the pad */
+      bi = output[i-1] & 255;
+      if (bi === 0 || bi > 16) {
+        throw new sjcl.exception.corrupt("pkcs#5 padding corrupt");
+      }
+      bo = bi * 0x1010101;
+      if (!w.equal(w.bitSlice([bo,bo,bo,bo], 0, bi*8),
+                   w.bitSlice(output, output.length*32 - bi*8, output.length*32))) {
+        throw new sjcl.exception.corrupt("pkcs#5 padding corrupt");
+      }
+
+      return w.bitSlice(output, 0, output.length*32 - bi*8);
+    }
+  };
 };
 /** @fileOverview OCB 2.0 implementation
  *
@@ -1341,7 +1965,7 @@ sjcl.mode.gcm = {
    * @param {Number} tlen The length of the tag, in bits.
    */
   _ctrMode: function(encrypt, prf, data, adata, iv, tlen) {
-    var H, J0, S0, enc, i, ctr, tag, last, l, bl, abl, ivbl, w=sjcl.bitArray, xor=w._xor4;
+    var H, J0, S0, enc, i, ctr, tag, last, l, bl, abl, ivbl, w=sjcl.bitArray;
 
     // Calculate data lengths
     l = data.length;
@@ -1431,17 +2055,38 @@ sjcl.misc.hmac = function (key, Hash) {
   
   this._baseHash[0].update(exKey[0]);
   this._baseHash[1].update(exKey[1]);
+  this._resultHash = new Hash(this._baseHash[0]);
 };
 
 /** HMAC with the specified hash function.  Also called encrypt since it's a prf.
  * @param {bitArray|String} data The data to mac.
  */
 sjcl.misc.hmac.prototype.encrypt = sjcl.misc.hmac.prototype.mac = function (data) {
-  var w = new (this._hash)(this._baseHash[0]).update(data).finalize();
-  return new (this._hash)(this._baseHash[1]).update(w).finalize();
+  if (!this._updated) {
+    this.update(data);
+    return this.digest(data);
+  } else {
+    throw new sjcl.exception.invalid("encrypt on already updated hmac called!");
+  }
 };
 
-/** @fileOverview Password-based key-derivation function, version 2.0.
+sjcl.misc.hmac.prototype.reset = function () {
+  this._resultHash = new this._hash(this._baseHash[0]);
+  this._updated = false;
+};
+
+sjcl.misc.hmac.prototype.update = function (data) {
+  this._updated = true;
+  this._resultHash.update(data);
+};
+
+sjcl.misc.hmac.prototype.digest = function () {
+  var w = this._resultHash.finalize(), result = new (this._hash)(this._baseHash[1]).update(w).finalize();
+
+  this.reset();
+
+  return result;
+};/** @fileOverview Password-based key-derivation function, version 2.0.
  *
  * @author Emily Stark
  * @author Mike Hamburg
@@ -1504,12 +2149,13 @@ sjcl.misc.pbkdf2 = function (password, salt, count, length, Prff) {
  * @author Emily Stark
  * @author Mike Hamburg
  * @author Dan Boneh
+ * @author Michael Brooks
  */
 
 /** @constructor
  * @class Random number generator
- *
  * @description
+ * <b>Use sjcl.random as a singleton for this class!</b>
  * <p>
  * This random number generator is a derivative of Ferguson and Schneier's
  * generator Fortuna.  It collects entropy from various events into several
@@ -1575,10 +2221,11 @@ sjcl.prng = function(defaultParanoia) {
   this._PARANOIA_LEVELS         = [0,48,64,96,128,192,256,384,512,768,1024];
   this._MILLISECONDS_PER_RESEED = 30000;
   this._BITS_PER_RESEED         = 80;
-}
+};
  
 sjcl.prng.prototype = {
-  /** Generate several random words, and return them in an array
+  /** Generate several random words, and return them in an array.
+   * A word consists of 32 bits (4 bytes)
    * @param {Number} nwords The number of words to generate.
    */
   randomWords: function (nwords, paranoia) {
@@ -1603,7 +2250,11 @@ sjcl.prng.prototype = {
     return out.slice(0,nwords);
   },
   
-  setDefaultParanoia: function (paranoia) {
+  setDefaultParanoia: function (paranoia, allowZeroParanoia) {
+    if (paranoia === 0 && allowZeroParanoia !== "Setting paranoia=0 will ruin your security; use it only for testing") {
+      throw "Setting paranoia=0 will ruin your security; use it only for testing";
+    }
+
     this._defaultParanoia = paranoia;
   },
   
@@ -1620,7 +2271,7 @@ sjcl.prng.prototype = {
       i, tmp,
       t = (new Date()).valueOf(),
       robin = this._robins[source],
-      oldReady = this.isReady(), err = 0;
+      oldReady = this.isReady(), err = 0, objName;
       
     id = this._collectorIds[source];
     if (id === undefined) { id = this._collectorIds[source] = this._collectorIdNext ++; }
@@ -1638,7 +2289,7 @@ sjcl.prng.prototype = {
       break;
       
     case "object":
-      var objName = Object.prototype.toString.call(data);
+      objName = Object.prototype.toString.call(data);
       if (objName === "[object Uint32Array]") {
         tmp = [];
         for (i = 0; i < data.length; i++) {
@@ -1650,7 +2301,7 @@ sjcl.prng.prototype = {
           err = 1;
         }
         for (i=0; i<data.length && !err; i++) {
-          if (typeof(data[i]) != "number") {
+          if (typeof(data[i]) !== "number") {
             err = 1;
           }
         }
@@ -1735,14 +2386,23 @@ sjcl.prng.prototype = {
   startCollectors: function () {
     if (this._collectorsStarted) { return; }
   
-    if (window.addEventListener) {
-      window.addEventListener("load", this._loadTimeCollector, false);
-      window.addEventListener("mousemove", this._mouseCollector, false);
-    } else if (document.attachEvent) {
-      document.attachEvent("onload", this._loadTimeCollector);
-      document.attachEvent("onmousemove", this._mouseCollector);
+    this._eventListener = {
+      loadTimeCollector: this._bind(this._loadTimeCollector),
+      mouseCollector: this._bind(this._mouseCollector),
+      keyboardCollector: this._bind(this._keyboardCollector),
+      accelerometerCollector: this._bind(this._accelerometerCollector)
     }
-    else {
+
+    if (window.addEventListener) {
+      window.addEventListener("load", this._eventListener.loadTimeCollector, false);
+      window.addEventListener("mousemove", this._eventListener.mouseCollector, false);
+      window.addEventListener("keypress", this._eventListener.keyboardCollector, false);
+      window.addEventListener("devicemotion", this._eventListener.accelerometerCollector, false);
+    } else if (document.attachEvent) {
+      document.attachEvent("onload", this._eventListener.loadTimeCollector);
+      document.attachEvent("onmousemove", this._eventListener.mouseCollector);
+      document.attachEvent("keypress", this._eventListener.keyboardCollector);
+    } else {
       throw new sjcl.exception.bug("can't attach event");
     }
   
@@ -1754,12 +2414,16 @@ sjcl.prng.prototype = {
     if (!this._collectorsStarted) { return; }
   
     if (window.removeEventListener) {
-      window.removeEventListener("load", this._loadTimeCollector, false);
-      window.removeEventListener("mousemove", this._mouseCollector, false);
-    } else if (window.detachEvent) {
-      window.detachEvent("onload", this._loadTimeCollector);
-      window.detachEvent("onmousemove", this._mouseCollector);
+      window.removeEventListener("load", this._eventListener.loadTimeCollector, false);
+      window.removeEventListener("mousemove", this._eventListener.mouseCollector, false);
+      window.removeEventListener("keypress", this._eventListener.keyboardCollector, false);
+      window.removeEventListener("devicemotion", this._eventListener.accelerometerCollector, false);
+    } else if (document.detachEvent) {
+      document.detachEvent("onload", this._eventListener.loadTimeCollector);
+      document.detachEvent("onmousemove", this._eventListener.mouseCollector);
+      document.detachEvent("keypress", this._eventListener.keyboardCollector);
     }
+
     this._collectorsStarted = false;
   },
   
@@ -1776,23 +2440,30 @@ sjcl.prng.prototype = {
   /** remove an event listener for progress or seeded-ness */
   removeEventListener: function (name, cb) {
     var i, j, cbs=this._callbacks[name], jsTemp=[];
-  
+
     /* I'm not sure if this is necessary; in C++, iterating over a
      * collection and modifying it at the same time is a no-no.
      */
-  
+
     for (j in cbs) {
-	if (cbs.hasOwnProperty(j) && cbs[j] === cb) {
+      if (cbs.hasOwnProperty(j) && cbs[j] === cb) {
         jsTemp.push(j);
       }
     }
-  
+
     for (i=0; i<jsTemp.length; i++) {
       j = jsTemp[i];
       delete cbs[j];
     }
   },
   
+  _bind: function (func) {
+    var that = this;
+    return function () {
+      func.apply(that, arguments);
+    };
+  },
+
   /** Generate 4 random words, no reseed, no gate.
    * @private
    */
@@ -1864,59 +2535,111 @@ sjcl.prng.prototype = {
     this._reseed(reseedData);
   },
   
+  _keyboardCollector: function () {
+    this._addCurrentTimeToEntropy(1);
+  },
+  
   _mouseCollector: function (ev) {
     var x = ev.x || ev.clientX || ev.offsetX || 0, y = ev.y || ev.clientY || ev.offsetY || 0;
     sjcl.random.addEntropy([x,y], 2, "mouse");
+    this._addCurrentTimeToEntropy(0);
   },
   
-  _loadTimeCollector: function (ev) {
-    sjcl.random.addEntropy((new Date()).valueOf(), 2, "loadtime");
+  _loadTimeCollector: function () {
+    this._addCurrentTimeToEntropy(2);
   },
-  
+
+  _addCurrentTimeToEntropy: function (estimatedEntropy) {
+    if (window && window.performance && typeof window.performance.now === "function") {
+      //how much entropy do we want to add here?
+      sjcl.random.addEntropy(window.performance.now(), estimatedEntropy, "loadtime");
+    } else {
+      sjcl.random.addEntropy((new Date()).valueOf(), estimatedEntropy, "loadtime");
+    }
+  },
+  _accelerometerCollector: function (ev) {
+    var ac = ev.accelerationIncludingGravity.x||ev.accelerationIncludingGravity.y||ev.accelerationIncludingGravity.z;
+    if(window.orientation){
+      var or = window.orientation;
+      if (typeof or === "number") {
+        sjcl.random.addEntropy(or, 1, "accelerometer");
+      }
+    }
+    if (ac) {
+      sjcl.random.addEntropy(ac, 2, "accelerometer");
+    }
+    this._addCurrentTimeToEntropy(0);
+  },
+
   _fireEvent: function (name, arg) {
     var j, cbs=sjcl.random._callbacks[name], cbsTemp=[];
-    /* TODO: there is a race condition between removing collectors and firing them */ 
+    /* TODO: there is a race condition between removing collectors and firing them */
 
     /* I'm not sure if this is necessary; in C++, iterating over a
      * collection and modifying it at the same time is a no-no.
      */
-  
+
     for (j in cbs) {
-     if (cbs.hasOwnProperty(j)) {
+      if (cbs.hasOwnProperty(j)) {
         cbsTemp.push(cbs[j]);
-     }
+      }
     }
-  
+
     for (j=0; j<cbsTemp.length; j++) {
-     cbsTemp[j](arg);
+      cbsTemp[j](arg);
     }
   }
 };
 
+/** an instance for the prng.
+* @see sjcl.prng
+*/
 sjcl.random = new sjcl.prng(6);
 
 (function(){
+  // function for getting nodejs crypto module. catches and ignores errors.
+  function getCryptoModule() {
+    try {
+      return require('crypto');
+    }
+    catch (e) {
+      return null;
+    }
+  }
+
   try {
+    var buf, crypt, ab;
+
     // get cryptographically strong entropy depending on runtime environment
-    if (typeof module !== 'undefined' && module.exports) {
-      // get entropy for node.js
-      var crypt = require('crypto');
-      var buf = crypt.randomBytes(1024/8);
+    if (typeof module !== 'undefined' && module.exports && (crypt = getCryptoModule()) && crypt.randomBytes) {
+      buf = crypt.randomBytes(1024/8);
+      buf = new Uint32Array(new Uint8Array(buf).buffer);
       sjcl.random.addEntropy(buf, 1024, "crypto.randomBytes");
 
-    } else if (window && window.crypto && window.crypto.getRandomValues) {
+    } else if (window && Uint32Array) {
+      ab = new Uint32Array(32);
+      if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(ab);
+      } else if (window.msCrypto && window.msCrypto.getRandomValues) {
+        window.msCrypto.getRandomValues(ab);
+      } else {
+        return;
+      }
+
       // get cryptographically strong entropy in Webkit
-      var ab = new Uint32Array(32);
-      window.crypto.getRandomValues(ab);
       sjcl.random.addEntropy(ab, 1024, "crypto.getRandomValues");
 
     } else {
       // no getRandomValues :-(
     }
   } catch (e) {
-    //we do not want the library to fail due to randomness not being maintained.
+    if (typeof window !== 'undefined' && window.console) {
+      console.log("There was an error collecting entropy from the browser:");
+      console.log(e);
+      //we do not want the library to fail due to randomness not being maintained.
+    }
   }
-})();
+}());
 /** @fileOverview Convenince functions centered around JSON encapsulation.
  *
  * @author Emily Stark
@@ -1927,17 +2650,17 @@ sjcl.random = new sjcl.prng(6);
  /** @namespace JSON encapsulation */
  sjcl.json = {
   /** Default values for encryption */
-  defaults: { v:1, iter:1000, ks:128, ts:64, mode:"ccm", adata:"", cipher:"aes" },
+  defaults: { v:1, iter:1000, ks:256, ts:128, mode:"gcm", adata:"", cipher:"aes" },
 
   /** Simple encryption function.
    * @param {String|bitArray} password The password or key.
    * @param {String} plaintext The data to encrypt.
    * @param {Object} [params] The parameters including tag, iv and salt.
    * @param {Object} [rp] A returned version with filled-in parameters.
-   * @return {String} The ciphertext.
+   * @return {Object} The cipher raw data.
    * @throws {sjcl.exception.invalid} if a parameter is invalid.
    */
-  encrypt: function (password, plaintext, params, rp) {
+  _encrypt: function (password, plaintext, params, rp) {
     params = params || {};
     rp = rp || {};
 
@@ -1951,7 +2674,7 @@ sjcl.random = new sjcl.prng(6);
     if (typeof p.iv === "string") {
       p.iv = sjcl.codec.base64.toBits(p.iv);
     }
-    
+
     if (!sjcl.mode[p.mode] ||
         !sjcl.cipher[p.cipher] ||
         (typeof password === "string" && p.iter <= 100) ||
@@ -1960,7 +2683,7 @@ sjcl.random = new sjcl.prng(6);
         (p.iv.length < 2 || p.iv.length > 4)) {
       throw new sjcl.exception.invalid("json encrypt: invalid parameters");
     }
-    
+
     if (typeof password === "string") {
       tmp = sjcl.misc.cachedPbkdf2(password, p);
       password = tmp.key.slice(0,p.ks/32);
@@ -1971,53 +2694,58 @@ sjcl.random = new sjcl.prng(6);
       password = tmp.key.slice(0,p.ks/32);
     }
     if (typeof plaintext === "string") {
-        plaintext = sjcl.codec.utf8String.toBits(plaintext);
+      plaintext = sjcl.codec.utf8String.toBits(plaintext);
     }
-    else {
-        plaintext = sjcl.codec.bytes.toBits(plaintext);
-    }
-
     if (typeof adata === "string") {
       adata = sjcl.codec.utf8String.toBits(adata);
     }
     prp = new sjcl.cipher[p.cipher](password);
-    
+
     /* return the json data */
     j._add(rp, p);
     rp.key = password;
-    
+
     /* do the encryption */
     p.ct = sjcl.mode[p.mode].encrypt(prp, plaintext, p.iv, adata, p.ts);
-   
-    //return p;
+
     //return j.encode(j._subtract(p, j.defaults));
-    return j.encode3(p);
+    return p;
   },
-  
+
+  /** Simple encryption function.
+   * @param {String|bitArray} password The password or key.
+   * @param {String} plaintext The data to encrypt.
+   * @param {Object} [params] The parameters including tag, iv and salt.
+   * @param {Object} [rp] A returned version with filled-in parameters.
+   * @return {String} The ciphertext serialized data.
+   * @throws {sjcl.exception.invalid} if a parameter is invalid.
+   */
+  encrypt: function (password, plaintext, params, rp) {
+    var j = sjcl.json, p = j._encrypt.apply(j, arguments);
+    return j.encode(p);
+  },
+
   /** Simple decryption function.
    * @param {String|bitArray} password The password or key.
-   * @param {String} ciphertext The ciphertext to decrypt.
+   * @param {Object} ciphertext The cipher raw data to decrypt.
    * @param {Object} [params] Additional non-default parameters.
    * @param {Object} [rp] A returned object with filled parameters.
    * @return {String} The plaintext.
    * @throws {sjcl.exception.invalid} if a parameter is invalid.
    * @throws {sjcl.exception.corrupt} if the ciphertext is corrupt.
    */
-  decrypt: function (password, ciphertext, returnBytes, params, rp) {
+  _decrypt: function (password, ciphertext, params, rp) {
     params = params || {};
     rp = rp || {};
-    
 
-    var j = sjcl.json;
-    
-    var p = j._add(j._add(j._add({},j.defaults),j.decode3(ciphertext)), params, true), ct, tmp, prp, adata=p.adata;
+    var j = sjcl.json, p = j._add(j._add(j._add({},j.defaults),ciphertext), params, true), ct, tmp, prp, adata=p.adata;
     if (typeof p.salt === "string") {
       p.salt = sjcl.codec.base64.toBits(p.salt);
     }
     if (typeof p.iv === "string") {
       p.iv = sjcl.codec.base64.toBits(p.iv);
     }
-    
+
     if (!sjcl.mode[p.mode] ||
         !sjcl.cipher[p.cipher] ||
         (typeof password === "string" && p.iter <= 100) ||
@@ -2027,85 +2755,45 @@ sjcl.random = new sjcl.prng(6);
         (p.iv.length < 2 || p.iv.length > 4)) {
       throw new sjcl.exception.invalid("json decrypt: invalid parameters");
     }
-    
+
     if (typeof password === "string") {
       tmp = sjcl.misc.cachedPbkdf2(password, p);
       password = tmp.key.slice(0,p.ks/32);
       p.salt  = tmp.salt;
     } else if (sjcl.ecc && password instanceof sjcl.ecc.elGamal.secretKey) {
-      //password = password.unkem(sjcl.codec.base64.toBits(p.kemtag)).slice(0,p.ks/32);
-      password = password.unkem(p.kemtag).slice(0,p.ks/32);
+      password = password.unkem(sjcl.codec.base64.toBits(p.kemtag)).slice(0,p.ks/32);
     }
     if (typeof adata === "string") {
       adata = sjcl.codec.utf8String.toBits(adata);
     }
     prp = new sjcl.cipher[p.cipher](password);
-    
+
     /* do the decryption */
     ct = sjcl.mode[p.mode].decrypt(prp, p.ct, p.iv, adata, p.ts);
-    
+
     /* return the json data */
     j._add(rp, p);
     rp.key = password;
 
-      if (returnBytes == 55) {
-          return sjcl.codec.bytes.fromBitsToTypedArray(ct);
-      }
+    return ct;
+  },
 
-    if (returnBytes == true) {
-        return sjcl.codec.bytes.fromBits(ct);
-    }
-
+  /** Simple decryption function.
+   * @param {String|bitArray} password The password or key.
+   * @param {String} ciphertext The ciphertext to decrypt.
+   * @param {Object} [params] Additional non-default parameters.
+   * @param {Object} [rp] A returned object with filled parameters.
+   * @return {String} The plaintext.
+   * @throws {sjcl.exception.invalid} if a parameter is invalid.
+   * @throws {sjcl.exception.corrupt} if the ciphertext is corrupt.
+   */
+  decrypt: function (password, ciphertext, params, rp) {
+    var j = sjcl.json;
+    var ct = j._decrypt(password, j.decode(ciphertext), params, rp);
     return sjcl.codec.utf8String.fromBits(ct);
-  },
-
-  encode2: function(obj) {
-    var concatResult = obj.salt.concat(obj.iv, obj.ct);
-    var base64Result = sjcl.codec.base64.fromBits(concatResult, 0);
-    return base64Result;
-  },
-
-  encode3: function(obj) {
-    var result = {};
-    if (obj.kemtag) {
-        result['kemtag'] = sjcl.codec.bytes.fromBitsToTypedArray(obj.kemtag);
-    }
-    if (obj.salt) {
-        result['salt'] = sjcl.codec.bytes.fromBitsToTypedArray(obj.salt);
-    }
-    result['iv'] = sjcl.codec.bytes.fromBitsToTypedArray(obj.iv);
-    result['ct'] = sjcl.codec.bytes.fromBitsToTypedArray(obj.ct);
-    return result;
-  },
-
-  decode2: function (encBase64) {
-    var encBites = sjcl.codec.bytes.toBits(encBase64);
-    var out = {}; 
-    out['salt'] = encBites.slice(0,2);
-
-    out['iv'] = encBites.slice(2,6);
-    out['ct'] = encBites.slice(6);
-    return out;
-  },
-
-  decode3: function(obj) {
-      var result = {};
-    if (obj.kemtag) {
-        result['kemtag'] = sjcl.codec.bytes.toBits(new Uint8Array(obj.kemtag));
-    }
-    if (obj.salt) {
-        result['salt'] = sjcl.codec.bytes.toBits(new Uint8Array(obj.salt));
-    }
-    result['iv'] = sjcl.codec.bytes.toBits(new Uint8Array(obj.iv));
-    result['ct'] = sjcl.codec.bytes.toBits(new Uint8Array(obj.ct));
-    return result;
 
   },
-
-  decode4: function(obj) {
-    return obj;
-  },
-
+  
   /** Encode a flat structure into a JSON string.
    * @param {Object} obj The structure to encode.
    * @return {String} A JSON string.
@@ -2121,23 +2809,23 @@ sjcl.random = new sjcl.prng(6);
         }
         out += comma + '"' + i + '":';
         comma = ',';
-        
+
         switch (typeof obj[i]) {
-        case 'number':
-        case 'boolean':
-          out += obj[i];
-          break;
-          
-        case 'string':
-          out += '"' + escape(obj[i]) + '"';
-          break;
-        
-        case 'object':
-          out += '"' + sjcl.codec.base64.fromBits(obj[i],0) + '"';
-          break;
-        
-        default:
-          throw new sjcl.exception.bug("json encode: unsupported type");
+          case 'number':
+          case 'boolean':
+            out += obj[i];
+            break;
+
+          case 'string':
+            out += '"' + escape(obj[i]) + '"';
+            break;
+
+          case 'object':
+            out += '"' + sjcl.codec.base64.fromBits(obj[i],0) + '"';
+            break;
+
+          default:
+            throw new sjcl.exception.bug("json encode: unsupported type");
         }
       }
     }
@@ -2196,13 +2884,13 @@ sjcl.random = new sjcl.prng(6);
    */
   _subtract: function (plus, minus) {
     var out = {}, i;
-    
+
     for (i in plus) {
       if (plus.hasOwnProperty(i) && plus[i] !== minus[i]) {
         out[i] = plus[i];
       }
     }
-    
+
     return out;
   },
   
@@ -2245,7 +2933,7 @@ sjcl.misc._pbkdf2Cache = {};
 
 /** Cached PBKDF2 key derivation.
  * @param {String} password The password.
- * @param {Object} [params] The derivation params (iteration count and optional salt).
+ * @param {Object} [obj] The derivation params (iteration count and optional salt).
  * @return {Object} The derived data in key, the salt in salt.
  */
 sjcl.misc.cachedPbkdf2 = function (password, obj) {
@@ -2287,7 +2975,7 @@ sjcl.bn.prototype = {
    * Initializes this with it, either as a bn, a number, or a hex string.
    */
   initWith: function(it) {
-    var i=0, k, n, l;
+    var i=0, k;
     switch(typeof it) {
     case "object":
       this.limbs = it.limbs.slice(0);
@@ -2596,7 +3284,7 @@ sjcl.bn.prototype = {
       carry = (l-m)*ipv;
     }
     if (carry === -1) {
-      limbs[i-1] -= this.placeVal;
+      limbs[i-1] -= pv;
     }
     return this;
   },
@@ -2638,7 +3326,9 @@ sjcl.bn.prototype = {
   }
 };
 
-/** @this { sjcl.bn } */
+/** @memberOf sjcl.bn
+* @this { sjcl.bn }
+*/
 sjcl.bn.fromBits = function(bits) {
   var Class = this, out = new Class(), words=[], w=sjcl.bitArray, t = this.prototype,
       l = Math.min(this.bitLength || 0x100000000, w.bitLength(bits)), e = l % t.radix || t.radix;
@@ -2662,7 +3352,9 @@ sjcl.bn.prototype.radixMask = (1 << sjcl.bn.prototype.radix) - 1;
  * i.e. a prime of the form 2^e + sum(a * 2^b),where the sum is negative and sparse.
  */
 sjcl.bn.pseudoMersennePrime = function(exponent, coeff) {
-  /** @constructor */
+  /** @constructor 
+  * @private
+  */
   function p(it) {
     this.initWith(it);
     /*if (this.limbs[this.modOffset]) {
@@ -2695,10 +3387,11 @@ sjcl.bn.pseudoMersennePrime = function(exponent, coeff) {
   ppr.modulus.cnormalize();
 
   /** Approximate reduction mod p.  May leave a number which is negative or slightly larger than p.
-   * @this {sjcl.bn}
+   * @memberof sjcl.bn
+   * @this { sjcl.bn }
    */
   ppr.reduce = function() {
-    var i, k, l, mo = this.modOffset, limbs = this.limbs, aff, off = this.offset, ol = this.offset.length, fac = this.factor, ll;
+    var i, k, l, mo = this.modOffset, limbs = this.limbs, off = this.offset, ol = this.offset.length, fac = this.factor, ll;
 
     i = this.minOffset;
     while (limbs.length > mo) {
@@ -2720,7 +3413,9 @@ sjcl.bn.pseudoMersennePrime = function(exponent, coeff) {
     return this;
   };
   
-  /** @this {sjcl.bn} */
+  /** @memberof sjcl.bn
+  * @this { sjcl.bn }
+  */
   ppr._strongReduce = (ppr.fullMask === -1) ? ppr.reduce : function() {
     var limbs = this.limbs, i = limbs.length - 1, k, l;
     this.reduce();
@@ -2735,7 +3430,8 @@ sjcl.bn.pseudoMersennePrime = function(exponent, coeff) {
   };
 
   /** mostly constant-time, very expensive full reduction.
-   * @this {sjcl.bn}
+   * @memberof sjcl.bn
+   * @this { sjcl.bn }
    */
   ppr.fullReduce = function() {
     var greater, i;
@@ -2769,7 +3465,9 @@ sjcl.bn.pseudoMersennePrime = function(exponent, coeff) {
   };
 
 
-  /** @this {sjcl.bn} */
+  /** @memberof sjcl.bn
+  * @this { sjcl.bn }
+  */
   ppr.inverse = function() {
     return (this.power(this.modulus.sub(2)));
   };
@@ -2824,6 +3522,9 @@ sjcl.bn.random = function(modulus, paranoia) {
   }
 };
 
+/**
+ * base class for all ecc operations.
+ */
 sjcl.ecc = {};
 
 /**
@@ -2982,7 +3683,7 @@ sjcl.ecc.pointJac.prototype = {
   /**
    * Returns a copy of this point converted to affine coordinates.
    * @return {sjcl.ecc.point} The converted point.
-   */  
+   */
   toAffine: function() {
     if (this.isIdentity || this.z.equals(0)) {
       return new sjcl.ecc.point(this.curve);
@@ -3145,117 +3846,103 @@ sjcl.ecc.curves = {
 
 };
 
-sjcl.ecc.curveName = function (curve) {
-  var curcurve;
-  for (curcurve in sjcl.ecc.curves) {
-    if (sjcl.ecc.curves.hasOwnProperty(curcurve)) {
-      if (sjcl.ecc.curves[curcurve] === curve) {
-        return curcurve;
-      }
+/** our basicKey classes
+*/
+sjcl.ecc.basicKey = {
+  /** ecc publicKey. 
+  * @constructor
+  * @param {curve} curve the elliptic curve
+  * @param {point} point the point on the curve
+  */
+  publicKey: function(curve, point) {
+    this._curve = curve;
+    this._curveBitLength = curve.r.bitLength();
+    if (point instanceof Array) {
+      this._point = curve.fromBits(point);
+    } else {
+      this._point = point;
     }
-  }
 
-  throw new sjcl.exception.invalid("no such curve");
+    /** get this keys point data
+    * @return x and y as bitArrays
+    */
+    this.get = function() {
+      var pointbits = this._point.toBits();
+      var len = sjcl.bitArray.bitLength(pointbits);
+      var x = sjcl.bitArray.bitSlice(pointbits, 0, len/2);
+      var y = sjcl.bitArray.bitSlice(pointbits, len/2);
+      return { x: x, y: y };
+    };
+  },
+
+  /** ecc secretKey
+  * @constructor
+  * @param {curve} curve the elliptic curve
+  * @param exponent
+  */
+  secretKey: function(curve, exponent) {
+    this._curve = curve;
+    this._curveBitLength = curve.r.bitLength();
+    this._exponent = exponent;
+
+    /** get this keys exponent data
+    * @return {bitArray} exponent
+    */
+    this.get = function () {
+      return this._exponent.toBits();
+    };
+  }
 };
 
-sjcl.ecc.deserialize = function (key) {
-  var types = ["elGamal", "ecdsa"];
+/** @private */
+sjcl.ecc.basicKey.generateKeys = function(cn) {
+  return function generateKeys(curve, paranoia, sec) {
+    curve = curve || 256;
 
-  if (!key || !key.curve || !sjcl.ecc.curves[key.curve]) { throw new sjcl.exception.invalid("invalid serialization"); }
-  if (types.indexOf(key.type) === -1) { throw new sjcl.exception.invalid("invalid type"); }
-
-  var curve = sjcl.ecc.curves[key.curve];
-
-  if (key.secretKey) {
-    if (!key.exponent) { throw new sjcl.exception.invalid("invalid exponent"); }
-    var exponent = new sjcl.bn(key.exponent);
-    return new sjcl.ecc[key.type].secretKey(curve, exponent);
-  } else {
-    if (!key.point) { throw new sjcl.exception.invalid("invalid point"); }
-    
-    var point = curve.fromBits(sjcl.codec.hex.toBits(key.point));
-    return new sjcl.ecc[key.type].publicKey(curve, point);
-  }
-};
-
-/* Diffie-Hellman-like public-key system */
-sjcl.ecc._dh = function(cn) {
-  sjcl.ecc[cn] = {
-    /** @constructor */
-    publicKey: function(curve, point) {
-      this._curve = curve;
-      this._curveBitLength = curve.r.bitLength();
-      if (point instanceof Array) {
-        this._point = curve.fromBits(point);
-      } else {
-        this._point = point;
-      }
-
-      this.serialize = function () {
-        var curveName = sjcl.ecc.curveName(curve);
-        return {
-          type: cn,
-          secretKey: false,
-          point: sjcl.codec.hex.fromBits(this._point.toBits()),
-          curve: curveName
-        };
-      };
-
-      this.get = function() {
-        var pointbits = this._point.toBits();
-        var len = sjcl.bitArray.bitLength(pointbits);
-        var x = sjcl.bitArray.bitSlice(pointbits, 0, len/2);
-        var y = sjcl.bitArray.bitSlice(pointbits, len/2);
-        return { x: x, y: y };
-      };
-    },
-
-    /** @constructor */
-    secretKey: function(curve, exponent) {
-      this._curve = curve;
-      this._curveBitLength = curve.r.bitLength();
-      this._exponent = exponent;
-
-      this.serialize = function () {
-        var exponent = this.get();
-        var curveName = sjcl.ecc.curveName(curve);
-        return {
-          type: cn,
-          secretKey: true,
-          exponent: sjcl.codec.hex.fromBits(exponent),
-          curve: curveName
-        };
-      };
-
-      this.get = function() {
-        return this._exponent.toBits();
-      };
-    },
-
-    /** @constructor */
-    generateKeys: function(curve, paranoia, sec) {
+    if (typeof curve === "number") {
+      curve = sjcl.ecc.curves['c'+curve];
       if (curve === undefined) {
-        curve = 256;
+        throw new sjcl.exception.invalid("no such curve");
       }
-      if (typeof curve === "number") {
-        curve = sjcl.ecc.curves['c'+curve];
-        if (curve === undefined) {
-          throw new sjcl.exception.invalid("no such curve");
-        }
-      }
-      if (sec === undefined) {
-        var sec = sjcl.bn.random(curve.r, paranoia);
-      }
-      var pub = curve.G.mult(sec);
-      return { pub: new sjcl.ecc[cn].publicKey(curve, pub),
-               sec: new sjcl.ecc[cn].secretKey(curve, sec) };
     }
-  }; 
+    sec = sec || sjcl.bn.random(curve.r, paranoia);
+
+    var pub = curve.G.mult(sec);
+    return { pub: new sjcl.ecc[cn].publicKey(curve, pub),
+             sec: new sjcl.ecc[cn].secretKey(curve, sec) };
+  };
 };
 
-sjcl.ecc._dh("elGamal");
+/** elGamal keys */
+sjcl.ecc.elGamal = {
+  /** generate keys
+  * @function
+  * @param curve
+  * @param {int} paranoia Paranoia for generation (default 6)
+  * @param {secretKey} sec secret Key to use. used to get the publicKey for ones secretKey
+  */
+  generateKeys: sjcl.ecc.basicKey.generateKeys("elGamal"),
+  /** elGamal publicKey. 
+  * @constructor
+  * @augments sjcl.ecc.basicKey.publicKey
+  */
+  publicKey: function (curve, point) {
+    sjcl.ecc.basicKey.publicKey.apply(this, arguments);
+  },
+  /** elGamal secretKey
+  * @constructor
+  * @augments sjcl.ecc.basicKey.secretKey
+  */
+  secretKey: function (curve, exponent) {
+    sjcl.ecc.basicKey.secretKey.apply(this, arguments);
+  }
+};
 
 sjcl.ecc.elGamal.publicKey.prototype = {
+  /** Kem function of elGamal Public Key
+  * @param paranoia paranoia to use for randomization.
+  * @return {object} key and tag. unkem(tag) with the corresponding secret key results in the key returned.
+  */
   kem: function(paranoia) {
     var sec = sjcl.bn.random(this._curve.r, paranoia),
         tag = this._curve.G.mult(sec).toBits(),
@@ -3265,34 +3952,49 @@ sjcl.ecc.elGamal.publicKey.prototype = {
 };
 
 sjcl.ecc.elGamal.secretKey.prototype = {
+  /** UnKem function of elGamal Secret Key
+  * @param {bitArray} tag The Tag to decrypt.
+  * @return {bitArray} decrypted key.
+  */
   unkem: function(tag) {
     return sjcl.hash.sha256.hash(this._curve.fromBits(tag).mult(this._exponent).toBits());
   },
 
+  /** Diffie-Hellmann function
+  * @param {elGamal.publicKey} pk The Public Key to do Diffie-Hellmann with
+  * @return {bitArray} diffie-hellmann result for this key combination.
+  */
   dh: function(pk) {
     return sjcl.hash.sha256.hash(pk._point.mult(this._exponent).toBits());
   }
 };
 
-sjcl.ecc._dh("ecdsa");
-
-sjcl.ecc.ecdsa.secretKey.prototype = {
-  sign: function(hash, paranoia, fakeLegacyVersion, fixedKForTesting) {
-    if (sjcl.bitArray.bitLength(hash) > this._curveBitLength) {
-      hash = sjcl.bitArray.clamp(hash, this._curveBitLength);
-    }
-    var R  = this._curve.r,
-        l  = R.bitLength(),
-        k  = fixedKForTesting || sjcl.bn.random(R.sub(1), paranoia).add(1),
-        r  = this._curve.G.mult(k).x.mod(R),
-        ss = sjcl.bn.fromBits(hash).add(r.mul(this._exponent)),
-        s  = fakeLegacyVersion ? ss.inverseMod(R).mul(k).mod(R)
-             : ss.mul(k.inverseMod(R)).mod(R);
-    return sjcl.bitArray.concat(r.toBits(l), s.toBits(l));
-  }
+/** ecdsa keys */
+sjcl.ecc.ecdsa = {
+  /** generate keys
+  * @function
+  * @param curve
+  * @param {int} paranoia Paranoia for generation (default 6)
+  * @param {secretKey} sec secret Key to use. used to get the publicKey for ones secretKey
+  */
+  generateKeys: sjcl.ecc.basicKey.generateKeys("ecdsa")
 };
 
+/** ecdsa publicKey. 
+* @constructor
+* @augments sjcl.ecc.basicKey.publicKey
+*/
+sjcl.ecc.ecdsa.publicKey = function (curve, point) {
+  sjcl.ecc.basicKey.publicKey.apply(this, arguments);
+};
+
+/** specific functions for ecdsa publicKey. */
 sjcl.ecc.ecdsa.publicKey.prototype = {
+  /** Diffie-Hellmann function
+  * @param {bitArray} hash hash to verify. 
+  * @param {bitArray} rs signature bitArray.
+  * @param {boolean}  fakeLegacyVersion use old legacy version
+  */
   verify: function(hash, rs, fakeLegacyVersion) {
     if (sjcl.bitArray.bitLength(hash) > this._curveBitLength) {
       hash = sjcl.bitArray.clamp(hash, this._curveBitLength);
@@ -3316,3 +4018,145 @@ sjcl.ecc.ecdsa.publicKey.prototype = {
     return true;
   }
 };
+
+/** ecdsa secretKey
+* @constructor
+* @augments sjcl.ecc.basicKey.publicKey
+*/
+sjcl.ecc.ecdsa.secretKey = function (curve, exponent) {
+  sjcl.ecc.basicKey.secretKey.apply(this, arguments);
+};
+
+/** specific functions for ecdsa secretKey. */
+sjcl.ecc.ecdsa.secretKey.prototype = {
+  /** Diffie-Hellmann function
+  * @param {bitArray} hash hash to sign. 
+  * @param {int} paranoia paranoia for random number generation
+  * @param {boolean} fakeLegacyVersion use old legacy version
+  */
+  sign: function(hash, paranoia, fakeLegacyVersion, fixedKForTesting) {
+    if (sjcl.bitArray.bitLength(hash) > this._curveBitLength) {
+      hash = sjcl.bitArray.clamp(hash, this._curveBitLength);
+    }
+    var R  = this._curve.r,
+        l  = R.bitLength(),
+        k  = fixedKForTesting || sjcl.bn.random(R.sub(1), paranoia).add(1),
+        r  = this._curve.G.mult(k).x.mod(R),
+        ss = sjcl.bn.fromBits(hash).add(r.mul(this._exponent)),
+        s  = fakeLegacyVersion ? ss.inverseMod(R).mul(k).mod(R)
+             : ss.mul(k.inverseMod(R)).mod(R);
+    return sjcl.bitArray.concat(r.toBits(l), s.toBits(l));
+  }
+};/** @fileOverview Javascript SRP implementation.
+ *
+ * This file contains a partial implementation of the SRP (Secure Remote
+ * Password) password-authenticated key exchange protocol. Given a user
+ * identity, salt, and SRP group, it generates the SRP verifier that may
+ * be sent to a remote server to establish and SRP account.
+ *
+ * For more information, see http://srp.stanford.edu/.
+ *
+ * @author Quinn Slack
+ */
+
+/**
+ * Compute the SRP verifier from the username, password, salt, and group.
+ * @class SRP
+ */
+sjcl.keyexchange.srp = {
+  /**
+   * Calculates SRP v, the verifier. 
+   *   v = g^x mod N [RFC 5054]
+   * @param {String} I The username.
+   * @param {String} P The password.
+   * @param {Object} s A bitArray of the salt.
+   * @param {Object} group The SRP group. Use sjcl.keyexchange.srp.knownGroup
+                           to obtain this object.
+   * @return {Object} A bitArray of SRP v.
+   */
+  makeVerifier: function(I, P, s, group) {
+    var x;
+    x = sjcl.keyexchange.srp.makeX(I, P, s);
+    x = sjcl.bn.fromBits(x);
+    return group.g.powermod(x, group.N);
+  },
+
+  /**
+   * Calculates SRP x.
+   *   x = SHA1(<salt> | SHA(<username> | ":" | <raw password>)) [RFC 2945]
+   * @param {String} I The username.
+   * @param {String} P The password.
+   * @param {Object} s A bitArray of the salt.
+   * @return {Object} A bitArray of SRP x.
+   */
+  makeX: function(I, P, s) {
+    var inner = sjcl.hash.sha1.hash(I + ':' + P);
+    return sjcl.hash.sha1.hash(sjcl.bitArray.concat(s, inner));
+  },
+
+  /**
+   * Returns the known SRP group with the given size (in bits).
+   * @param {String} i The size of the known SRP group.
+   * @return {Object} An object with "N" and "g" properties.
+   */
+  knownGroup:function(i) {
+    if (typeof i !== "string") { i = i.toString(); }
+    if (!sjcl.keyexchange.srp._didInitKnownGroups) { sjcl.keyexchange.srp._initKnownGroups(); }
+    return sjcl.keyexchange.srp._knownGroups[i];
+  },
+
+  /**
+   * Initializes bignum objects for known group parameters.
+   * @private
+   */
+  _didInitKnownGroups: false,
+  _initKnownGroups:function() {
+    var i, size, group;
+    for (i=0; i < sjcl.keyexchange.srp._knownGroupSizes.length; i++) {
+      size = sjcl.keyexchange.srp._knownGroupSizes[i].toString();
+      group = sjcl.keyexchange.srp._knownGroups[size];
+      group.N = new sjcl.bn(group.N);
+      group.g = new sjcl.bn(group.g);
+    }
+    sjcl.keyexchange.srp._didInitKnownGroups = true;
+  },
+
+  _knownGroupSizes: [1024, 1536, 2048],
+  _knownGroups: {
+    1024: {
+      N: "EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C" +
+         "9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE4" +
+         "8E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B29" +
+         "7BCF1885C529F566660E57EC68EDBC3C05726CC02FD4CBF4976EAA9A" +
+         "FD5138FE8376435B9FC61D2FC0EB06E3",
+      g:2
+    },
+
+    1536: {
+      N: "9DEF3CAFB939277AB1F12A8617A47BBBDBA51DF499AC4C80BEEEA961" +
+         "4B19CC4D5F4F5F556E27CBDE51C6A94BE4607A291558903BA0D0F843" +
+         "80B655BB9A22E8DCDF028A7CEC67F0D08134B1C8B97989149B609E0B" +
+         "E3BAB63D47548381DBC5B1FC764E3F4B53DD9DA1158BFD3E2B9C8CF5" +
+         "6EDF019539349627DB2FD53D24B7C48665772E437D6C7F8CE442734A" +
+         "F7CCB7AE837C264AE3A9BEB87F8A2FE9B8B5292E5A021FFF5E91479E" +
+         "8CE7A28C2442C6F315180F93499A234DCF76E3FED135F9BB",
+      g: 2
+    },
+
+    2048: {
+      N: "AC6BDB41324A9A9BF166DE5E1389582FAF72B6651987EE07FC319294" +
+         "3DB56050A37329CBB4A099ED8193E0757767A13DD52312AB4B03310D" +
+         "CD7F48A9DA04FD50E8083969EDB767B0CF6095179A163AB3661A05FB" +
+         "D5FAAAE82918A9962F0B93B855F97993EC975EEAA80D740ADBF4FF74" +
+         "7359D041D5C33EA71D281E446B14773BCA97B43A23FB801676BD207A" +
+         "436C6481F1D2B9078717461A5B9D32E688F87748544523B524B0D57D" +
+         "5EA77A2775D2ECFA032CFBDBF52FB3786160279004E57AE6AF874E73" +
+         "03CE53299CCC041C7BC308D82A5698F3A8D0C38271AE35F8E9DBFBB6" +
+         "94B5C803D89F7AE435DE236D525F54759B65E372FCD68EF20FA7111F" +
+         "9E4AFF73",
+      g: 2
+    }
+  }
+
+};
+

@@ -971,7 +971,7 @@ if (typeof jQuery === 'undefined') { throw new Error('Jasny Bootstrap\'s JavaScr
     if (this.original.exists) this.$element.addClass('fileinput-exists').removeClass('fileinput-new')
      else this.$element.addClass('fileinput-new').removeClass('fileinput-exists')
     
-    this.$element.trigger('reset.bs.fileinput')
+    //this.$element.trigger('reset.bs.fileinput')
   },
 
   Fileinput.prototype.trigger = function(e) {

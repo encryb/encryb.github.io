@@ -16,6 +16,8 @@ define([
     // Set client for Backbone.DropboxDatastore to work with Dropbox
     Backbone.DropboxDatastore.client = client;
 
+    Backbone.Dropbox = Dropbox;
+
     return client;
 
 

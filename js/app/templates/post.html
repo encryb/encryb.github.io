@@ -4,7 +4,7 @@
      </div>
     <div style="margin-left: 50px;">
         <div>
-            <strong>Ogi Bor</strong>
+            <strong></strong>
         </div>
         <div class="small">
             <%= new Date(sharedDate).toLocaleString() %>
@@ -12,13 +12,16 @@
     </div>
     <br>
 
-    <div class="thumbnail">
+    <div class="thumbnail" style="margin-bottom: 10px; margin-top: 15px;">
         <div class="caption">
-            <p>
-                <%= textData %>
-            </p>
+            <% if (typeof textData !== "undefined") { %>
+                <p>
+                    <%= textData %>
+                </p>
+            <% } %>
+
         </div>
-        <% if (resizedImageData != null && resizedImageData != "pending") { %>
+        <% if (typeof resizedImageData !== "undefined" && resizedImageData != "pending") { %>
             <img id ="resizedImage" src='<%= resizedImageData %>'>
         <% } %>
     </div>

@@ -1,11 +1,12 @@
 define([
     'backbone',
     'underscore',
+    'sjcl',
     'app/storage',
     'app/encryption',
     'utils/data-convert',
     'utils/random'
-], function (Backbone, _, Storage, Encryption, DataConvert, Random) {
+], function (Backbone, _, Sjcl, Storage, Encryption, DataConvert, Random) {
 
     var Post = Backbone.Model.extend({
 
@@ -15,12 +16,12 @@ define([
             sharedDate: null,
             password: null,
             hasText: false,
-            hasImage: false,
+            hasImage: false
 
             // not persisted
-            resizedImageData: null,
-            fullImageData: null,
-            textData: null
+            //resizedImageData: null,
+            //fullImageData: null,
+            //textData: null
         },
 
         nonPersistent: [ "owner", "resizedImageData", "fullImageData", "textData"],
@@ -42,6 +43,7 @@ define([
             var model = this;
 
             var password = this.get('password');
+
             var deferredText = null;
             var deferredResizedImage = null;
             var deferredFullImage = null;
@@ -57,7 +59,6 @@ define([
                     deferredFullImage = Storage.downloadData(this.get('fullImageUrl'), true, password);
                 }
             }
-
 
             $.when(deferredText, deferredResizedImage, deferredFullImage)
                 .done(function (textResp, resizedImageResp, fullImageResp) {
@@ -81,7 +82,7 @@ define([
             var deferred = $.Deferred();
 
             var id = Random.makeId();
-            var password = Encryption.generateRandomPassword();
+            var password = Sjcl.random.randomWords(8,1);
 
             var text = this.get('textData');
             var encText = null;
@@ -93,20 +94,20 @@ define([
             var encImage = null;
             if (image) {
                 var imageDict = DataConvert.dataUriToTypedArray(image);
-                encImage = Encryption.encryptWithPassword(password, imageDict['mimeType'], imageDict['data']);
+                encImage = Encryption.encryptImageWithPassword(password, imageDict['mimeType'], imageDict['data']);
             }
 
             var resizedImage = this.get('resizedImageData');
             var encResizedImage = null;
             if (resizedImage) {
                 var resizedImageDict = DataConvert.dataUriToTypedArray(resizedImage);
-                encResizedImage = Encryption.encryptWithPassword(password, resizedImageDict['mimeType'], resizedImageDict['data']);
+                encResizedImage = Encryption.encryptImageWithPassword(password, resizedImageDict['mimeType'], resizedImageDict['data']);
             }
 
             var model = this;
             $.when(Storage.uploadPost(id, encText, encResizedImage, encImage)).done(function (update) {
 
-                update['password'] = password;
+                update['password'] = Sjcl.codec.bytes.fromBits(password);
                 model.set(update);
                 deferred.resolve();
             });
