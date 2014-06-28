@@ -64,29 +64,28 @@ define([
     */
 
 
+    function decrypt(data, password) {
+
+        var encData = convertToBits(data);
+        if (password instanceof Array) {
+            password = Sjcl.codec.bytes.toBits(password);
+        }
+        var ct = Sjcl.json._decrypt(password, encData);
+
+        return ct;
+    }
+
     exports.decryptImageData = function(packedData, password) {
         var data = Encoding.decode(packedData);
-        var encData = decode(data);
-        var bitPassword = Sjcl.codec.bytes.toBits(password);
-
-
-        var ct = Sjcl.json._decrypt(bitPassword, encData);
-
+        var ct = decrypt(data, password);
         var decrypted = Sjcl.codec.bytes.fromBits(ct);
-
         var imageData = "data:" +  data.mimeType + ";base64," + DataConvert.arrayToBase64(decrypted);
         return imageData;
     }
 
     exports.decryptTextData = function(packedData, password) {
         var data = Encoding.decode(packedData);
-
-        var encData = decode(data);
-
-        var bitPassword = Sjcl.codec.bytes.toBits(password);
-
-        var ct = Sjcl.json._decrypt(bitPassword, encData);
-
+        var ct = decrypt(data, password);
         var decrypted = Sjcl.codec.utf8String.fromBits(ct);
         return decrypted;
     }
@@ -94,19 +93,9 @@ define([
 
     exports.decryptBinaryData = function(packedData, password) {
         var data = Encoding.decode(packedData);
-        var encData = decode(data);
-        var bitPassword = Sjcl.codec.bytes.toBits(password);
-
-        var ct = Sjcl.json._decrypt(bitPassword, encData);
-
+        var ct = decrypt(data, password);
         var decrypted = fromBitsToTypedArray(ct);
         return decrypted;
-    }
-
-    exports.generateRandomPassword = function() {
-        var randomBytes = Sjcl.random.randomWords(16,1);
-        var randomString = Sjcl.codec.base64.fromBits(randomBytes);
-        return randomString;
     }
 
     /*
@@ -135,7 +124,7 @@ define([
         return result;
     }
 
-    function decode(obj) {
+    function convertToBits(obj) {
         var result = {};
         if (obj.kemtag) {
             result['kemtag'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.kemtag));
