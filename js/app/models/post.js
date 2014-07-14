@@ -8,6 +8,8 @@ define([
     'utils/random'
 ], function (Backbone, _, Sjcl, Storage, Encryption, DataConvert, Random) {
 
+    var FOLDER_POSTS = "posts/";
+
     var Post = Backbone.Model.extend({
 
         defaults: {
@@ -18,13 +20,19 @@ define([
             hasText: false,
             hasImage: false
 
+            // no defaults
+            // folderId
+            // textUrl
+            // resizedImageUrl
+            // imageUrl
+
             // not persisted
             //resizedImageData: null,
             //fullImageData: null,
             //textData: null
         },
 
-        nonPersistent: [ "owner", "resizedImageData", "fullImageData", "textData"],
+        nonPersistent: [ "owner", "resizedImageData", "fullImageData", "textData", "profilePictureUrl", "myPost", "owner"],
 
         // Return a copy of the model's `attributes` object.
         toJSON: function(options) {
@@ -36,52 +44,11 @@ define([
             }
         },
 
-        fetchPost: function(fullFetch) {
-
-            var deferred = $.Deferred();
-
-            var model = this;
-
-            var password = this.get('password');
-
-            var deferredText = null;
-            var deferredResizedImage = null;
-            var deferredFullImage = null;
-
-            if (model.get('textData') == null && model.get('hasText')) {
-                deferredText = Storage.downloadData(this.get('textUrl'), false, password);
-            }
-            if (model.get('hasImage')) {
-                if(model.get('resizedImageData') == null) {
-                    deferredResizedImage = Storage.downloadData(this.get('resizedImageUrl'), true, password);
-                }
-                if(fullFetch && model.get('fullImageData') == null) {
-                    deferredFullImage = Storage.downloadData(this.get('fullImageUrl'), true, password);
-                }
-            }
-
-            $.when(deferredText, deferredResizedImage, deferredFullImage)
-                .done(function (textResp, resizedImageResp, fullImageResp) {
-                var updates = {};
-                if(textResp != null) {
-                    updates['textData'] = textResp;
-                }
-                if(resizedImageResp != null) {
-                    updates['resizedImageData'] = resizedImageResp;
-                }
-                if (fullImageResp != null) {
-                    updates['fullImageData'] = fullImageResp;
-                }
-                model.set(updates);
-                deferred.resolve();
-            });
-            return deferred;
-        },
         uploadPost: function () {
 
             var deferred = $.Deferred();
 
-            var id = Random.makeId();
+            var postId = Random.makeId();
             var password = Sjcl.random.randomWords(8,1);
 
             var text = this.get('textData');
@@ -105,13 +72,18 @@ define([
             }
 
             var model = this;
-            $.when(Storage.uploadPost(id, encText, encResizedImage, encImage)).done(function (update) {
+            $.when(Storage.uploadPost(FOLDER_POSTS + postId, encText, encResizedImage, encImage)).done(function (update) {
 
+                update['postId'] = postId;
                 update['password'] = Sjcl.codec.bytes.fromBits(password);
                 model.set(update);
                 deferred.resolve();
             });
             return deferred;
+        },
+        deletePost: function() {
+            Storage.remove(FOLDER_POSTS + this.get('postId'));
+            this.destroy();
         }
     });
     return Post;

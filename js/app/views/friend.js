@@ -2,14 +2,14 @@ define([
   'jquery',
   'underscore',
   'backbone',
+  'marionette',
   'app/views/modals',
   'require-text!app/templates/friend.html'
 
-], function($, _, Backbone, Modals, FriendTemplate) {
+], function($, _, Backbone, Marionette, Modals, FriendTemplate) {
 
 
-  var FriendView = Backbone.View.extend({
-
+  var FriendView = Marionette.ItemView.extend({
 
     // Cache the template function for a single item.
     template: _.template( FriendTemplate ),
@@ -18,15 +18,10 @@ define([
       this.listenTo(this.model, 'change', this.render);
     },
 
-    // Re-renders the titles of the todo item.
-    render: function() {
-      this.$el.html( this.template( this.model.toJSON( ) ));
-      return this;
-    },
-
     events: {
       "click #editFriend": "editFriend",
-      "click #filterFriend": "filterFriend"
+      "click #filterFriend": "filterFriend",
+      "click #removeFriend": "removeFriend"
     },
 
     filterFriend: function(){
@@ -35,6 +30,10 @@ define([
 
     editFriend: function() {
         Modals.showFriend(this.model);
+    },
+
+    removeFriend: function() {
+        this.model.destroy();
     }
   });
   return FriendView;

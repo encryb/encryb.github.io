@@ -2,43 +2,33 @@ define([
     'jquery',
     'underscore',
     'backbone',
+    'marionette',
     'app/views/modals',
     'require-text!app/templates/post.html'
 
-], function($, _, Backbone, Modals, PostTemplate){
+], function($, _, Backbone, Marionette, Modals, PostTemplate){
 
-    var PostView = Backbone.View.extend({
+    var PostView = Marionette.ItemView.extend({
 
         template: _.template( PostTemplate ),
 
         initialize: function() {
-            this.updateJson();
-            this.listenTo(this.model, 'change', this.updateJsonAndRender);
             this.model.fetchPost(false);
         },
 
-        updateJsonAndRender: function() {
-            this.updateJson();
-            this.render();
-        },
-
-        updateJson: function(){
-            var json = this.model.toJSON({full:true});
+        serializeModel: function(model){
+            var attr = _.clone(model.attributes);
             if('profilePictureUrl' in this.options) {
-                json['profilePictureUrl'] = this.options['profilePictureUrl'];
+                attr['profilePictureUrl'] = this.options['profilePictureUrl'];
             }
             if ('myPost' in this.options) {
-                json['myPost'] = this.options['myPost'];
+                attr['myPost'] = this.options['myPost'];
             }
-
-            this.json = json;
-
+            return attr;
         },
 
-        render: function() {
-
-            this.$el.html( this.template( this.json ) );
-            return this;
+        'modelEvents': {
+            'change': 'render'
         },
 
         events: {
@@ -51,7 +41,8 @@ define([
         },
 
         deletePost: function() {
-            this.model.destroy();
+            this.trigger("post:delete");
+            this.model.deletePost();
         }
     });
     return PostView;

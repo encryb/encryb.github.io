@@ -11,14 +11,13 @@
 <body>
 <div id="container" class="container">
     <div class="page-header">
+        <div class="pull-right"><a href="#" id="myInfo" class="btn btn-default" role="button">My Info</a></div>
         <h1>Encryb <small>Private social network</small></h1>
-
     </div>
 
     <div class="row">
         <div class="col-lg-2">
             <a href="#" id="addFriend" class="btn btn-default" role="button">Add Friend</a>
-            <a href="#" id="myInfo" class="btn btn-default" role="button">My Info</a>
             <h3>Friends</h3>
             <div id="friends"></div>
         </div>
@@ -51,17 +50,7 @@
                     </form>
                 </header>
                 <section id="main">
-                    <!-- Nav tabs -->
-                    <ul class="nav nav-tabs">
-                        <li><a href="#myPosts" data-toggle="tab">My Posts</a></li>
-                        <li class="active"><a href="#friendsPosts" data-toggle="tab">Friends' Posts</a></li>
-                    </ul>
-
-                    <!-- Tab panes -->
-                    <div class="tab-content">
-                        <div class="tab-pane" id="myPosts"><ul id="content"></ul></div>
-                        <div class="tab-pane active" id="friendsPosts"><ul id="otherContent"></ul></div>
-                    </div>
+                    <div id="friendsPosts"></div>
                 </section>
                 <footer id="footer"></footer>
             </section>

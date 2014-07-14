@@ -14,8 +14,33 @@ var exports = {};
 var TAG_TYPE_RESIZED = "resized";
 var TAG_TYPE_FULLSIZE = "fullsize";
 var TAG_TYPE_TEXT = "text";
-var TAG_SPLIT = "--";
+var TAG_SPLIT = "/";
 
+exports.createFolder = function(path) {
+    var deferred = $.Deferred();
+    DropboxClient.mkdir(path, function (error, stats) {
+        if (error) {
+            deferred.fail();
+            console.log(error);
+        } else {
+            deferred.resolve(stats);
+        }
+    });
+    return deferred;
+}
+
+exports.remove = function(path) {
+    var deferred = $.Deferred();
+    DropboxClient.remove(path, function (error, stats) {
+        if (error) {
+            deferred.fail();
+            console.log(error);
+        } else {
+            deferred.resolve(stats);
+        }
+    });
+    return deferred;
+}
 
 exports.downloadDropbox = function(path) {
     var deferred = $.Deferred();
@@ -46,7 +71,7 @@ exports.uploadDropbox = function(path, data) {
 
 exports.shareDropbox = function(stats) {
     var deferred = $.Deferred();
-    DropboxClient.makeUrl(stats.path, {downloadHack: true}, function (error, resp) {
+    DropboxClient.makeUrl(stats.path, {downloadHack:true}, function (error, resp) {
         if (error) {
             deferred.fail();
             console.log(error);
@@ -74,41 +99,41 @@ exports.processContent() {
 
 
 exports.getFullImagePath = function(id) {
-    return TAG_TYPE_FULLSIZE + TAG_SPLIT + id;
+    return id + TAG_SPLIT + TAG_TYPE_FULLSIZE;
 }
 
 exports.getResizedImagePath = function(id) {
-    return TAG_TYPE_RESIZED + TAG_SPLIT + id;
+    return id + TAG_SPLIT + TAG_TYPE_RESIZED;
 }
 
 exports.getTextPath = function(id) {
-    return TAG_TYPE_TEXT + TAG_SPLIT + id;
+    return id + TAG_SPLIT + TAG_TYPE_TEXT;
 }
 
-exports.uploadPost = function(id, textData, resizedImageData, imageData) {
-        var deferred = $.Deferred();
+exports.uploadPost = function (id, textData, resizedImageData, imageData) {
+    var deferred = $.Deferred();
 
-        var deferredText = null;
-        var deferredFullImage = null;
-        var deferredResizedImage = null;
+    var createFolder = exports.createFolder(id);
 
-        if (textData) {
-            deferredText = exports.uploadDropbox(exports.getTextPath(id),textData).then(exports.shareDropbox);
-        }
-        if (resizedImageData) {
-            deferredResizedImage = exports.uploadDropbox(exports.getResizedImagePath(id), resizedImageData).then(exports.shareDropbox);
-        }
-        if (imageData) {
-            deferredFullImage = exports.uploadDropbox(exports.getFullImagePath(id), imageData).then(exports.shareDropbox);
-        }
+    var deferredText = null;
+    var deferredFullImage = null;
+    var deferredResizedImage = null;
+
+    if (textData) {
+        deferredText = exports.uploadDropbox(exports.getTextPath(id), textData).then(exports.shareDropbox);
+    }
+    if (resizedImageData) {
+        deferredResizedImage = exports.uploadDropbox(exports.getResizedImagePath(id), resizedImageData).then(exports.shareDropbox);
+    }
+    if (imageData) {
+        deferredFullImage = exports.uploadDropbox(exports.getFullImagePath(id), imageData).then(exports.shareDropbox);
+    }
+
+
+    $.when(createFolder).done(function() {
+        var update = {};
 
         $.when(deferredText, deferredResizedImage, deferredFullImage).done(function(textUrl, resizedImageUrl, imageUrl){
-
-            var update = {};
-
-            console.log(textUrl);
-            console.log(resizedImageUrl);
-            console.log(imageUrl );
 
             if (textUrl != null) {
                 update['textUrl'] = textUrl;
@@ -119,8 +144,10 @@ exports.uploadPost = function(id, textData, resizedImageData, imageData) {
             if (imageUrl != null) {
                 update['fullImageUrl'] = imageUrl;
             }
+
             deferred.resolve(update);
         });
+    });
 
     return deferred;
 }
