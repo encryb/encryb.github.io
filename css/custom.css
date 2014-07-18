@@ -73,7 +73,10 @@ ul.collection-list li {
     display: inline;
 }
 
-textarea.newPost {
-    margin-bottom: 5px;
+.icon_with_text {
+    margin-right: 5px;
 }
 
+.new_post .form-group {
+    margin-bottom: 4px
+}
