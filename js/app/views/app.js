@@ -48,8 +48,8 @@ define([
             friends.fetch();
 
             var perms = new PermissionCollection();
-
             perms.addFriends(friends);
+
             var newPostView = new NewPostView({
                 permissions: perms
             });
@@ -184,7 +184,19 @@ define([
             var posts = myPosts.toJSON();
             var manifest = {};
 
-            manifest['posts'] = myPosts.toJSON();
+            var filteredPosts = [];
+
+            for (var i = 0; i< posts.length; i++) {
+                var post = posts[i];
+                if (!post.hasOwnProperty('permissions') ||
+                    $.inArray("all", post.permissions) > -1 ||
+                    $.inArray(friend.get('id'), post.permissions) > -1
+                ) {
+                    filteredPosts.push(_.omit(post, 'permissions'));
+                }
+            }
+
+            manifest['posts'] = filteredPosts;
 
             var profile = profiles.getFirst();
             manifest['name'] = profile.get('name');

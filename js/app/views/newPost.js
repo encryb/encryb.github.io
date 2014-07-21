@@ -10,20 +10,12 @@ define([
 
 ], function($, _, Backbone, Marionette, Selectize, Post, ImageUtil, NewPostTemplate){
 
-    var PermissionItemView = Marionette.ItemView.extend({
-        template: _.template("<%= display %>"),
-        tagName: "option",
-        onRender: function(){
-            this.$el.attr('value', this.model.get('id'));
-        }
-    });
-
     var NewPostView = Marionette.CompositeView.extend({
         template: _.template( NewPostTemplate ),
 
         initialize: function() {
             this.listenTo(this.options.permissions, "add", this.permissionAdded);
-
+            this.listenTo(this.options.permissions, "remove", this.permissionRemoved);
         },
 
         events: {
@@ -47,35 +39,20 @@ define([
         },
 
         permissionAdded: function(permission) {
-            console.log("Add Permission");
             var selectize = this.ui.permissions[0].selectize;
             selectize.addOption(permission.toJSON());
-            selectize.refreshOptions();
-
+            selectize.refreshOptions(true);
         },
 
-        /*
-        initialize: function(){
-            var model = new Backbone.Model({id: "all", name: "ALL"});
 
-            var view = new PermissionItemView({model: model});
-            this.addChild(view);
+        // $TODO: figure out why removal doesn't work
+        permissionRemoved: function(permission) {
+            var selectize = this.ui.permissions[0].selectize;
+            selectize.removeOption(permission.toJSON());
+            selectize.refreshOptions(true);
         },
-        */
 
-        /*
-        serializeData: function() {
 
-            var data = {items: Marionette.ItemView.prototype.serializeCollection(this.collection)};
-            console.log(data);
-            return data;
-        },
-        */
-/*
-        childView: PermissionItemView,
-
-        childViewContainer: "select",
-*/
         ui: {
             newPostText: '#newPostText',
             newPostImage: '#newPostImage',
@@ -90,11 +67,10 @@ define([
             event.preventDefault();
 
             var selectize = this.ui.permissions[0].selectize;
-            console.log(selectize.getValue());
 
             var post = new Post();
             var date = new Date().getTime();
-            post.set({owner: "MEEEEEEEE", sharedDate: date, created: date});
+            post.set({owner: "MEEEEEEEE", sharedDate: date, created: date, permissions: selectize.getValue()});
 
             var postText = this.ui.newPostText.val();
             if (postText && postText.length > 0) {
