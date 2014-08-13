@@ -21,6 +21,11 @@
     right:8px;
 }
 
+.friend_panel {
+    width: 120px;
+    margin-bottom: 10px;
+}
+
 .friend_edit_button {
     position:absolute;
     bottom:0px;
@@ -62,7 +67,7 @@ ul.collection-list li {
 
 
 .post {
-    margin: 7px;
+    margin-bottom: 7px;
     padding: 10px;
     border: 1px solid #AAA;
     border-radius: 4px;   /* may need vendor varients */
@@ -79,4 +84,65 @@ ul.collection-list li {
 
 .new_post .form-group {
     margin-bottom: 4px
+}
+
+
+.new_post_input {
+    padding: 10px;
+    border: 1px solid #AAA;
+    background: #FFF;
+    border-radius: 4px;
+    width: 50%;
+}
+
+.typeahead {
+    padding: 6px;
+    border: 1px solid #AAA;
+    border-radius: 4px;   /* may need vendor varients */
+    background: #FFF;
+    color: #999999;
+}
+
+.typeahead:focus {
+    border: 1px solid #0097cf;
+}
+
+.comment {
+    padding-bottom: 5px;
+    padding-top: 5px;
+}
+
+.comment:nth-of-type(even) {
+    background: #F8F8F8;
+}
+
+.comment-border {
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 6px 0;
+}
+
+.nopadding {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.bottom-5 {
+    margin-bottom: 5px;
+}
+
+.top-15 {
+    margin-top: 15px;
+}
+
+.upvote-thumbnail {
+    position: relative;
+    float: left;
+    display: inline-block;
+    width: auto;
+    max-height: 36px;
+    padding: 1px;
+    background-color: #fff;
+    border: 2px solid #ddd;
+    border-radius: 2px;
 }

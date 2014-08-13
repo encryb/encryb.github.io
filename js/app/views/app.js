@@ -8,12 +8,14 @@ define([
     'app/encryption',
     'app/models/post',
     'app/models/friend',
-    'app/collections/myPosts',
-    'app/collections/posts',
-    'app/collections/friends',
+    'app/collections/persist/posts',
+    'app/collections/persist/friends',
+    'app/collections/persist/profiles',
+    'app/collections/persist/comments',
+    'app/collections/persist/upvotes',
     'app/collections/permissions',
-    'app/collections/profiles',
-    'app/views/newPost',
+    'app/collections/wall',
+    'app/views/createPost',
     'app/views/post',
     'app/views/friend',
     'app/views/modals',
@@ -21,12 +23,18 @@ define([
     'utils/data-convert',
     'utils/image',
     'utils/random'
-], function($, _, Backbone, Marionette, Msgpack, Visibility, Encryption, Post, Friend, MyPosts, PostCollection, FriendCollection, PermissionCollection, ProfileCollection, NewPostView, PostView, FriendView, Modals, Storage, DataConvert, ImageUtil, RandomUtil){
+], function($, _, Backbone, Marionette, Msgpack, Visibility, Encryption, PostModel, FriendModel, PostColl,
+            FriendColl, ProfileColl, CommentColl, UpvoteColl, PermissionColl, WallColl,
+            CreatePostView, PostView, FriendView,
+            Modals, Storage, DataConvert, ImageUtil, RandomUtil){
 
-    var myPosts = new MyPosts();
-    var friends = new FriendCollection();
-    var otherCollection = new PostCollection();
-    var profiles = new ProfileCollection();
+    var wall = new WallColl();
+
+    var posts = new PostColl();
+    var comments = new CommentColl();
+    var upvotes = new UpvoteColl();
+    var friends = new FriendColl();
+    var profiles = new ProfileColl();
 
     var AppView = Backbone.View.extend({
 
@@ -35,34 +43,39 @@ define([
             var app = this;
             this.listenTo(friends, 'add', this.addFriendsPosts);
 
+            upvotes.fetch();
+            wall.addMyUpvotes(upvotes);
+
+
             // Wait for user profile to sync before displaying user posts
             // This is required for user name / image to show up properly in posts
             $.when(profiles.fetch()).done(function() {
                 var profilePictureUrl = profiles.getFirst().get('pictureUrl');
                 var profileName = profiles.getFirst().get('name');
 
-                otherCollection.addMyCollection(myPosts, profileName, profilePictureUrl);
-                myPosts.fetch();
+                wall.addMyCollection(posts, comments, profileName, profilePictureUrl);
+                posts.fetch();
+                comments.fetch();
             });
 
             friends.fetch();
 
-            var perms = new PermissionCollection();
+            var perms = new PermissionColl();
             perms.addFriends(friends);
 
-            var newPostView = new NewPostView({
+            var createPostView = new CreatePostView({
                 permissions: perms
             });
-            newPostView.render();
-            $("#newPost").html(newPostView.el);
+            createPostView.render();
+            $("#createPost").html(createPostView.el);
 
-            newPostView.on("post:submit", function(post){
-                myPosts.add(post);
+            createPostView.on("post:submit", function(post){
+                posts.add(post);
                 post.save();
                 app.saveManifests();
             });
 
-            var friendsList = new Friends({
+            var friendsList = new FriendsView({
                 collection: friends
             });
 
@@ -70,14 +83,32 @@ define([
             $("#friends").html(friendsList.el);
 
 
-            var myPostList = new Posts({
-                collection: otherCollection
+            var wallView = new WallView({
+                collection: wall
             });
 
-            myPostList.render();
-            $("#friendsPosts").html(myPostList.el);
+            wallView.on("childview:post:like", function(postView, id){
+                wall.toggleUpvote(id);
+                setTimeout(function(){app.saveManifests()}, 100);
+            });
 
-            myPostList.on("childview:post:delete", function(post){
+            wallView.on("childview:comment:submit", function(postView, comment) {
+                comments.addComment(comment['postId'], comment['text'], comment['date']);
+                setTimeout(function(){app.saveManifests()}, 100);
+            });
+
+            wallView.on("childview:comment:delete", function(postView, commentId) {
+                var comment = comments.findWhere({id:commentId});
+                if (comment) {
+                    comment.destroy();
+                    setTimeout(function(){app.saveManifests()}, 100);
+                }
+            });
+
+            wallView.render();
+            $("#wall").html(wallView.el);
+
+            wallView.on("childview:post:delete", function(post){
                 setTimeout(function(){app.saveManifests()}, 100);
             });
 
@@ -115,10 +146,17 @@ define([
 
                 var posts = decObj['posts'];
 
+                var userId = -1;
+                if (decObj.hasOwnProperty('userId')) {
+                    var userId = decObj['userId'];
+                }
+
                 friend.set('pictureUrl', decObj['pictureUrl'] );
+                friend.set('userId', userId);
                 friend.save();
 
-                otherCollection.addCollection(friendManifest, posts, decObj['name'], friend.get('pictureUrl'));
+
+                wall.addCollection(friendManifest, decObj);
 
             });
 
@@ -166,9 +204,9 @@ define([
             var deferred = $.Deferred();
 
             var id = RandomUtil.makeId();
-            var changes = {account: account, manifestFile: id, friendsManifest: friendsManifest};
+            var attrs = {account: account, manifestFile: id, friendsManifest: friendsManifest};
 
-            var newFriend = new Friend(changes);
+            var newFriend = new FriendModel(attrs);
             this.saveManifest(newFriend)
                 .then(Storage.shareDropbox)
                 .then(function(url) {
@@ -181,26 +219,29 @@ define([
         },
 
         saveManifest: function(friend) {
-            var posts = myPosts.toJSON();
             var manifest = {};
 
             var filteredPosts = [];
 
-            for (var i = 0; i< posts.length; i++) {
-                var post = posts[i];
-                if (!post.hasOwnProperty('permissions') ||
-                    $.inArray("all", post.permissions) > -1 ||
-                    $.inArray(friend.get('id'), post.permissions) > -1
+            posts.each(function(post) {
+                var permissions = post.get("permissions");
+                if (!permissions ||
+                    $.inArray("all", permissions) > -1 ||
+                    $.inArray(friend.get('id'), permissions) > -1
                 ) {
-                    filteredPosts.push(_.omit(post, 'permissions'));
+                    filteredPosts.push(_.omit(post.toJSON(), 'permissions'));
                 }
-            }
+
+            });
 
             manifest['posts'] = filteredPosts;
+            manifest['upvotes'] = upvotes.toJSON();
+            manifest['comments'] = comments.toJSON();
 
             var profile = profiles.getFirst();
             manifest['name'] = profile.get('name');
             manifest['pictureUrl'] = profile.get('pictureUrl');
+            manifest['userId'] = Backbone.DropboxDatastore.client.dropboxUid();
 
             var packedManifest = new Uint8Array(Msgpack.encode(manifest));
             return friend.saveManifest(packedManifest);
@@ -224,12 +265,12 @@ define([
         }
     });
 
-    var Posts = Marionette.CollectionView.extend({
+    var WallView = Marionette.CollectionView.extend({
         childView: PostView
     });
 
 
-    var Friends = Marionette.CollectionView.extend({
+    var FriendsView = Marionette.CollectionView.extend({
         childView: FriendView
     });
     return AppView;

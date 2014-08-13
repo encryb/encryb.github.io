@@ -1,0 +1,21 @@
+<div class="row">
+    <div class="col-lg-3">
+        <strong><%= name %></strong>
+        <div class="small">
+            <%= new Date(date).toLocaleString() %>
+        </div>
+    </div>
+    <div class="col-lg-9">
+        <%= text %>
+        <% if (myComment) { %>
+        <div class="dropdown pull-right">
+            <button class="btn btn-default dropdown-toggle" type="button" id="commentDropdown" data-toggle="dropdown">
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu" aria-labelledby="commentDropdown">
+                <li role="presentation"><a id="deleteComment" role="menuitem" tabindex="-1" href="#">Delete</a></li>
+            </ul>
+        </div>
+        <% } %>
+    </div>
+</div>

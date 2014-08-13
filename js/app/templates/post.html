@@ -1,36 +1,14 @@
-<div class="col-lg-12 post">
-    <div class="pull-left">
-        <img src="<%= profilePictureUrl %>" style="margin-right: 10px; width: 60px; height: 50px;">
-     </div>
-    <div style="margin-left: 50px;">
-        <div>
-            <strong><%= owner %></strong>
-        </div>
-        <div class="small">
-            <%= new Date(sharedDate).toLocaleString() %>
+<div class="post">
+    <div id="postContent">
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="comment-border"></div>
         </div>
     </div>
-    <br>
-
-    <div class="thumbnail" style="margin-bottom: 10px; margin-top: 15px;">
-        <div class="caption">
-            <% if (typeof textData !== "undefined") { %>
-                <p>
-                    <%= textData %>
-                </p>
-            <% } %>
-
-        </div>
-        <% if (typeof resizedImageData !== "undefined" && resizedImageData != "pending") { %>
-            <img id ="resizedImage" src='<%= resizedImageData %>'>
-        <% } %>
+    <div id="upvotes">
     </div>
-    <div class="btn-group">
-        <a href="#" class="btn btn-default" role="button">Comment</a>
-        <% if (myPost == true) { %>
-            <a href="#" id="deletePost" class="btn btn-primary" role="button">Delete</a>
-            <a href="#" class="btn btn-default" role="button">Share</a>
-        <% } %>
-
+    <div class="bottom-5"></div>
+    <div id="comments">
     </div>
 </div>
