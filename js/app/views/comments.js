@@ -40,21 +40,34 @@ define([
         events: {
             'submit form': 'createComment',
             'focusin #createCommentTrigger' : 'expandCommentForm',
-            'click #expandComments' : 'expandComments'
+            'click #expandComments' : 'expandComments',
+            'focusout #createCommentText' : 'checkForCollapse'
         },
 
         ui: {
             createCommentTrigger: '#createCommentTrigger',
             createCommentText: '#createCommentText',
-            createCommentImage: '#createCommentImage',
             createCommentForm: '#createCommentForm',
             createCommentDiv: '#createCommentDiv',
             expandComments: '#expandComments'
+        },
+        checkForCollapse: function() {
+            console.log("Check for Collapse");
+            var text = this.ui.createCommentText.val();
+            if (!text || text.length === 0) {
+                this.collapseCommentForm();
+            }
         },
         expandCommentForm: function() {
             event.preventDefault();
             this.ui.createCommentDiv.addClass("in");
             this.ui.createCommentTrigger.hide();
+            this.ui.createCommentText.focus();
+        },
+        collapseCommentForm: function() {
+            this.ui.createCommentForm.trigger('reset');
+            this.ui.createCommentDiv.removeClass("in");
+            this.ui.createCommentTrigger.show();
         },
         expandComments: function() {
             event.preventDefault();
@@ -75,10 +88,7 @@ define([
             attr['text'] = text;
             this.trigger("comment:submit", attr);
 
-            this.ui.createCommentForm.trigger('reset');
-            this.ui.createCommentDiv.removeClass("in");
-            this.ui.createCommentTrigger.show();
-
+            this.collapseCommentForm();
             console.log("comment added", attr);
         },
         collectionEvents: {

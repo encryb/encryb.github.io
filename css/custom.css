@@ -95,6 +95,14 @@ ul.collection-list li {
     width: 50%;
 }
 
+.new_comment_input {
+    padding: 5px;
+    border: 1px solid #AAA;
+    background: #FFF;
+    border-radius: 4px;
+    width: 50%;
+}
+
 .typeahead {
     padding: 6px;
     border: 1px solid #AAA;

@@ -58,7 +58,7 @@ var Wall2 = Backbone.Collection.extend({
         }
     },
 
-    onFriendUpvoteAdded: function(upvoteId, name, pictureUrl, userId) {
+    addFriendsUpvote: function(upvoteId, name, pictureUrl, userId) {
         if (this.idToModel.hasOwnProperty(upvoteId)) {
             var model = this.idToModel[upvoteId];
             if(model) {
@@ -66,7 +66,7 @@ var Wall2 = Backbone.Collection.extend({
             }
         }
     },
-    onFriendUpvoteRemoved: function(upvoteId, friend) {
+    removeFriendsUpvote: function(upvoteId, friend) {
         if (this.idToModel.hasOwnProperty(upvoteId)) {
             var model = this.idToModel[upvoteId];
             if(model) {
@@ -136,13 +136,14 @@ var Wall2 = Backbone.Collection.extend({
         this.myName = name;
         this.myPicture = pictureUrl;
         var wall = this;
+        this.myComments = comments;
+
         posts.each(function(post) {
             var wrapper = new PostWrapper();
             wrapper.setMyPost(post, name, pictureUrl);
             wall.add(wrapper);
         });
 
-        this.myComments = comments;
         this.listenTo(comments, 'add', this.onMyCommentAdded.bind(this, name));
         this.listenTo(comments, 'remove', this.onMyCommentRemoved);
 
@@ -179,10 +180,10 @@ var Wall2 = Backbone.Collection.extend({
                 }
                 else if (key == "upvotes"){
                     if (action == "add") {
-                        //wall.onFriendUpvoteAdded(item.postId, friend.name, friend.pictureUrl, userId);
+                        wall.addFriendsUpvote(item.postId, friend.name, friend.pictureUrl, userId);
                     }
                     else {
-                        //wall.onFriendUpvoteRemoved(item.postId, userId);
+                        wall.removeFriendsUpvote(item.postId, userId);
                     }
                 }
                 else if (key == "comments") {
@@ -204,7 +205,7 @@ var Wall2 = Backbone.Collection.extend({
             if (friend.hasOwnProperty('upvotes')) {
                 for (var i=0; i< friend.upvotes.length; i++) {
                     var upvote = friend.upvotes[i];
-                    //wall.onFriendUpvoteAdded(upvote.postId, friend.name, friend.pictureUrl, userId);
+                    wall.addFriendsUpvote(upvote.postId, friend.name, friend.pictureUrl, userId);
                 }
             }
             if (friend.hasOwnProperty('comments')) {
