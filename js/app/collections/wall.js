@@ -179,10 +179,10 @@ var Wall2 = Backbone.Collection.extend({
                 }
                 else if (key == "upvotes"){
                     if (action == "add") {
-                        wall.onFriendUpvoteAdded(item.postId, friend.name, friend.pictureUrl, userId);
+                        //wall.onFriendUpvoteAdded(item.postId, friend.name, friend.pictureUrl, userId);
                     }
                     else {
-                        wall.onFriendUpvoteRemoved(item.postId, userId);
+                        //wall.onFriendUpvoteRemoved(item.postId, userId);
                     }
                 }
                 else if (key == "comments") {
@@ -204,7 +204,7 @@ var Wall2 = Backbone.Collection.extend({
             if (friend.hasOwnProperty('upvotes')) {
                 for (var i=0; i< friend.upvotes.length; i++) {
                     var upvote = friend.upvotes[i];
-                    wall.onFriendUpvoteAdded(upvote.postId, friend.name, friend.pictureUrl, userId);
+                    //wall.onFriendUpvoteAdded(upvote.postId, friend.name, friend.pictureUrl, userId);
                 }
             }
             if (friend.hasOwnProperty('comments')) {
