@@ -4,55 +4,20 @@ define([
     'backbone',
     'backbone.bootstrap-modal',
     'backbone-forms-bootstrap3',
-    'app/models/profile',
-    'utils/data-convert',
-    'app/storage',
-    'require-text!app/templates/imageModal.html',
-    'require-text!app/templates/profile.html'
-], function($, _, Backbone, BackboneModal, BackboneForm, ProfileModel, DataConvert, Storage, ImageModalTemplate, MyInfoTemplate){
+    'require-text!app/templates/imageModal.html'
+], function($, _, Backbone, BackboneModal, BackboneForm, ImageModalTemplate){
 
     var modals = {};
 
     var ImageModalView = Backbone.View.extend({
         template: _.template( ImageModalTemplate ),
         initialize: function() {
-
             this.listenTo(this.model, 'change', this.render);
             this.model.fetchPost(true);
         },
         render: function() {
             this.$el.html( this.template( this.model.toJSON({full:true}) ) );
             return this;
-        }
-    });
-
-
-    var MyInfoModalView = Backbone.View.extend({
-        template: _.template( MyInfoTemplate ),
-        render: function() {
-            this.$el.html( this.template( this.model.toJSON({full:true}) ) );
-            return this;
-        },
-
-
-
-        events: {
-            "change #name": "nameChange",
-            "change.bs.fileinput #profileFile": "pictureChange"
-        },
-
-        nameChange: function(event){
-            this.options.changes['name'] = event.target.value;
-        },
-
-        pictureChange: function(event, file) {
-            //$BUG : event is being fired twice, once without file
-            if(!file) {
-                return;
-            }
-            console.log(file);
-            console.log(file.result);
-            this.options.changes['picture'] = file.result;
         }
     });
 
@@ -87,7 +52,9 @@ define([
             cancelText: false,
             fullscreen: true,
             content: new ImageModalView({model: model})
-        }).open();
+        });
+
+        modal.open();
 
         return modal;
 

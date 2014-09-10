@@ -1,16 +1,4 @@
-<div class="panel panel-default friend_panel">
-    <div class="panel-heading">
-        <h4 class="panel-title"><%= account %></h4>
-    </div>
-    <div>
-        <div class="img_container">
-            <img src="<%= pictureUrl %>" class="img-thumbnail" style="width: 120px; height: 100px;">
-            <button id="editFriend" type="button" class="btn btn-default btn-sm friend_edit_button friend_overlay">
-                <span class="glyphicon glyphicon-edit"></span>
-            </button>
-            <button id="removeFriend" type="button" class="btn btn-default btn-sm friend_remove_button friend_overlay">
-                <span class="glyphicon glyphicon-remove"></span>
-            </button>
-        </div>
-    </div>
+<div class="thumbnail bottom-5">
+    <div><strong><%= account %></strong></div>
+    <img class=img-responsive" style="max-height: 120px" id="friendImg" src="<%= pictureUrl %>">
 </div>

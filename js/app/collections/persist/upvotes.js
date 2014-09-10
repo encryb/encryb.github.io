@@ -28,8 +28,14 @@ var Upvotes = Backbone.Collection.extend({
             return true;
         }
         return false;
-
-
+    },
+    toggleUpvote: function(postId) {
+        if (this.isUpvoted(postId)) {
+            this.removeUpvote(postId);
+        }
+        else {
+            this.addUpvote(postId);
+        }
     }
 });
 

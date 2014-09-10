@@ -11,7 +11,7 @@ define([
     var client = new Dropbox.Client({key: DROPBOX_APP_KEY});
 
     // Redirect to Dropbox to authenticate if client isn't authenticated
-    if (!client.isAuthenticated()) client.authenticate();
+    if (!client.isAuthenticated()) client.authenticate({interactive: false});
 
     // Set client for Backbone.DropboxDatastore to work with Dropbox
     Backbone.DropboxDatastore.client = client;

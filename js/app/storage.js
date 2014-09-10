@@ -42,15 +42,25 @@ exports.remove = function(path) {
     return deferred;
 }
 
+exports.exists = function(path) {
+    var deferred = $.Deferred();
+    DropboxClient.stat(path, {}, function (error, data, stats) {
+        if (error) {
+            deferred.fail();
+        } else {
+            deferred.resolve(path);
+        }
+    });
+    return deferred;
+}
 exports.downloadDropbox = function(path) {
     var deferred = $.Deferred();
-    DropboxClient.readFile(path, {arrayBuffer:true}, function (error, data, stats) {
+    DropboxClient.readFile(path, {}, function (error, data, stats) {
         if (error) {
             deferred.fail();
             console.log(error);
         } else {
             deferred.resolve(data);
-            console.log(stats);
         }
     });
     return deferred;
@@ -81,22 +91,6 @@ exports.shareDropbox = function(stats) {
     });
     return deferred;
 }
-
-/*
-exports.processContent() {
-	getContentFolder(function(contentFolder) {
-		gdrive.listFilesInFolder(contentFolder, function(files) {
-			var groups = groupContent(files);
-			for (var contentId in groups) {
-				var content = groups[contentId];
-				gdrive.downloadFile(content[TAG_TYPE_RESIZED], function(data) {
-					displayResizedImage(contentId, data, content[TAG_TYPE_FULLSIZE]);
-				});
-			}
-		});
-	});
-}*/
-
 
 exports.getFullImagePath = function(id) {
     return id + TAG_SPLIT + TAG_TYPE_FULLSIZE;

@@ -8,7 +8,7 @@ define([
 
 ], function($, _, Backbone, Marionette, Modals, PostContentTemplate){
 
-    var PostView = Marionette.ItemView.extend({
+    var PostContentView = Marionette.ItemView.extend({
 
         template: _.template( PostContentTemplate ),
 
@@ -30,5 +30,5 @@ define([
         }
 
     });
-    return PostView;
+    return PostContentView;
 });

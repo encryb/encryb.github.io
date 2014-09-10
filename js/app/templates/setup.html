@@ -1,0 +1,90 @@
+<% if (displayAbout) { %>
+<div class="row">
+    <div class="col-lg-9 col-md-11 col-xs-12">
+        <div id="about" class="jumbotron clearfix">
+            <h1>
+                Welcome to Encryb!
+            </h1>
+            <img src="img/crib-lg.png" class="pull-left">
+            <p class="top-15">
+                Encryb is a private social network built on public cloud storage. All data is encrypted so that only you and your friends can view it
+                and is not examined for advertising or any other purposes. Encryb is an open source project. For source code, please visit https://github.com/encryb.
+            </p>
+            <div class="pull-right top-15">
+                <a class="btn btn-primary btn-large" href="#">Learn more</a>
+            </div>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<div class="row bottom-5">
+    <div class="col-lg-4 col-md-5 col-xs-6">
+        <div class="well well-sm <% if (!dropboxEnabled) { %> border-warning <% } %> clearfix">
+            <div class="pull-left">
+                <span class="glyphicon <% if (dropboxEnabled) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
+            </div>
+            <div class="pull-right">
+                <img src="img/dropbox.png">
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-4 col-xs-4">
+        <% if (!dropboxEnabled) { %>
+            <p class="lead text-danger">Dropbox access not authorized.</p>
+        <% } %>
+    </div>
+    <div class="col-xs-2">
+        <div class="btn-group-vertical pull-right">
+            <% if (dropboxEnabled) { %>
+                <button type="button" id="dropboxLogout" class="btn btn-default">Logout</button>
+            <% } else { %>
+                <button type="button" id="dropboxLogin" class="btn btn-default">Login / Authorize</button>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<div class="row bottom-5 border <% if (!dropboxEnabled && !keysLoaded) { %> hide <% } %>">
+    <div class="col-lg-4 col-md-5 col-xs-6">
+        <div class="well well-sm <% if (!keysLoaded) { %>border-warning<% } %> clearfix">
+            <div class="pull-left">
+                <span class="glyphicon <% if (keysLoaded) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
+            </div>
+            <div class="pull-right password-icon">
+                <span class="glyphicon glyphicon-asterisk"></span>
+                <span class="glyphicon glyphicon-asterisk"></span>
+                <span class="glyphicon glyphicon-asterisk"></span>
+                <span class="glyphicon glyphicon-lock"></span>
+
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-4 col-xs-4">
+        <% if (!keysLoaded) { %>
+            <p class="lead text-danger">Encryption keys not found.</p>
+        <% } %>
+    </div>
+    <div class="col-xs-2">
+        <div class="btn-group-vertical pull-right">
+            <% if (!keysLoaded) { %>
+                <button type="button" id="createNewKeysButton" class="btn btn-default">Create New Keys</button>
+                <span class="btn btn-default btn-file">Upload Keys<input id="uploadKeysInput" type="file" /></span>
+                <button type="button" id="loadKeysFromDropboxButton" class="btn btn-default">Load from Dropbox</button>
+                <button type="button" id="loadKeysFromGoogleButton" class="btn btn-default">Load from Google</button>
+            <% } else { %>
+                <button type="button" id="removeKeysButton" class="btn btn-default">Remove Keys</button>
+                <button type="button" id="downloadKeysButton" class="btn btn-default">Download Keys</button>
+                <button type="button" id="saveKeysToGoogleButton" class="btn btn-default">Backup to Google</button>
+            <% } %>
+        </div>
+    </div>
+</div>
+<% if (dropboxEnabled && keysLoaded) { %>
+<div class="row bottom-5">
+    <div class="col-lg-9 col-md-11 col-xs-12">
+        <button id="continueButton" class="btn btn-success btn-lg">Continue</button>
+    </div>
+</div>
+<% } %>
+</div>

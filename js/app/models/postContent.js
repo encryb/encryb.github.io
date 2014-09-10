@@ -5,6 +5,11 @@ define([
 
     var PostContent = Backbone.Model.extend({
 
+
+        defaults: {
+            fullImageData: "img/loading.gif"
+        },
+
         // not persisted
         sync: function () { return false; },
 
@@ -27,7 +32,7 @@ define([
                 if(model.get('resizedImageData') == null) {
                     deferredResizedImage = Storage.downloadData(model.get('resizedImageUrl'), true, password);
                 }
-                if(fullFetch && model.get('fullImageData') == null) {
+                if(fullFetch && model.get('fullImageData') == model.defaults.fullImageData) {
                     deferredFullImage = Storage.downloadData(model.get('fullImageUrl'), true, password);
                 }
             }

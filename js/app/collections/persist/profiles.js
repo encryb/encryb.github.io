@@ -1,13 +1,22 @@
 define([
     'backbone',
-    'dropboxdatastore',
-    'app/models/profile'
-], function(Backbone, DropboxDatastore, ProfileModel){
+    'dropboxdatastore'
+], function(Backbone, DropboxDatastore){
+
+    var ProfileModel = Backbone.Model.extend({
+        defaults: {
+            name: "",
+            intro: "",
+            pictureFile: "",
+            pictureUrl: "img/nopic.gif",
+            updated: false
+        }
+    });
 
     var ProfileCollection = Backbone.Collection.extend({
         model: ProfileModel,
 
-        dropboxDatastore: new Backbone.DropboxDatastore('Profiles_2'),
+        dropboxDatastore: new Backbone.DropboxDatastore('Profiles_3'),
 
         initialize: function() {
             this.dropboxDatastore.syncCollection(this);

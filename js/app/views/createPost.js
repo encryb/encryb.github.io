@@ -2,13 +2,15 @@ define([
     'jquery',
     'underscore',
     'backbone',
+    'jasny-bootstrap',
     'marionette',
     'selectize',
+    'app/app',
     'app/models/post',
     'utils/image',
     'require-text!app/templates/createPost.html'
 
-], function($, _, Backbone, Marionette, Selectize, Post, ImageUtil, CreatePostTemplate){
+], function($, _, Backbone, JasnyBootsrap, Marionette, Selectize, App, Post, ImageUtil, CreatePostTemplate){
 
     var NewPostView = Marionette.CompositeView.extend({
         template: _.template( CreatePostTemplate ),
@@ -16,6 +18,11 @@ define([
         initialize: function() {
             this.listenTo(this.options.permissions, "add", this.permissionAdded);
             this.listenTo(this.options.permissions, "remove", this.permissionRemoved);
+
+            this.on("post:submit", function(post){
+                App.state.myPosts.create(post, {wait:true});
+                App.state.saveManifests();
+            });
         },
 
         events: {

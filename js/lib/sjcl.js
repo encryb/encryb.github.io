@@ -2761,7 +2761,7 @@ sjcl.random = new sjcl.prng(6);
       password = tmp.key.slice(0,p.ks/32);
       p.salt  = tmp.salt;
     } else if (sjcl.ecc && password instanceof sjcl.ecc.elGamal.secretKey) {
-      password = password.unkem(sjcl.codec.base64.toBits(p.kemtag)).slice(0,p.ks/32);
+      password = password.unkem(p.kemtag).slice(0,p.ks/32);
     }
     if (typeof adata === "string") {
       adata = sjcl.codec.utf8String.toBits(adata);

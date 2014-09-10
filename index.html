@@ -6,33 +6,16 @@
     <link rel="stylesheet" href="css/jasny-bootstrap.css">
     <link rel="stylesheet" href="css/backbone-forms-bootstrap3.css">
     <link rel="stylesheet" href="css/selectize.bootstrap3.css">
+    <link rel="stylesheet" href="css/jquery.Jcrop.css">
     <link rel="stylesheet" href="css/custom.css">
 </head>
 <body>
 <div id="container" class="container">
-    <div class="page-header">
-        <div class="pull-right"><a href="#" id="myInfo" class="btn btn-default" role="button">My Info</a></div>
-        <h2>Encryb <small>Private social network</small></h2>
+    <div class="page-header top-15">
+        <h2 class="nopadding"><a href=""><img src="img/crib-md.png"></a>Encryb <small>Private social network</small></h2>
     </div>
-
-    <div class="row">
-        <div class="col-lg-2">
-            <h4>Cribs</h4>
-            <div id="cribs"></div>
-            <h4>Friends <a href="#" id="addFriend" class="btn btn-default" role="button">Add</a>
-            </h4>
-            <div id="friends"></div>
-        </div>
-        <div class="col-lg-7">
-            <div class="row">
-                <div id="createPost"></div>
-            </div>
-            <div class="row">
-                <div id="wall"></div>
-            </div>
-        </div>
-    </div>
+    <div id="main"></div>
 </div>
-<script data-main="js/app" src="require.js"></script>
+<script data-main="js/init" src="require.js"></script>
 </body>
 </html>

@@ -55,21 +55,21 @@ define([
             var text = this.get('textData');
             var encText = null;
             if (text) {
-                encText = Encryption.encryptWithPassword(password,  "plain/text", text);
+                encText = Encryption.encrypt(password,  "plain/text", text);
             }
 
             var image = this.get('fullImageData');
             var encImage = null;
             if (image) {
                 var imageDict = DataConvert.dataUriToTypedArray(image);
-                encImage = Encryption.encryptImageWithPassword(password, imageDict['mimeType'], imageDict['data']);
+                encImage = Encryption.encrypt(password, imageDict['mimeType'], imageDict['data'], true);
             }
 
             var resizedImage = this.get('resizedImageData');
             var encResizedImage = null;
             if (resizedImage) {
                 var resizedImageDict = DataConvert.dataUriToTypedArray(resizedImage);
-                encResizedImage = Encryption.encryptImageWithPassword(password, resizedImageDict['mimeType'], resizedImageDict['data']);
+                encResizedImage = Encryption.encrypt(password, resizedImageDict['mimeType'], resizedImageDict['data'], true);
             }
 
             var model = this;

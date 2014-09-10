@@ -14,6 +14,10 @@
     display:inline-block;
     text-align:center;
 }
+.img_container  img {
+    max-height: 360px;
+    max-width: 300px;
+}
 
 .img_remove {
     position:absolute;
@@ -70,8 +74,8 @@ ul.collection-list li {
     margin-bottom: 7px;
     padding: 10px;
     border: 1px solid #AAA;
-    border-radius: 4px;   /* may need vendor varients */
-    background: #FAFAFA;
+    border-radius: 4px;
+    background: #F5F5F5;
 }
 
 .fileinput {
@@ -135,12 +139,27 @@ ul.collection-list li {
     margin: 0 !important;
 }
 
+.nomargin {
+    margin: 0 !important;
+}
+
 .bottom-5 {
     margin-bottom: 5px;
 }
 
 .top-15 {
     margin-top: 15px;
+}
+.padding-5 {
+    padding: 5px;
+}
+
+.margin-right-15 {
+    margin-right: 15px;
+}
+
+.padding-5 {
+    padding: 5px;
 }
 
 .upvote-thumbnail {
@@ -153,4 +172,37 @@ ul.collection-list li {
     background-color: #fff;
     border: 2px solid #ddd;
     border-radius: 2px;
+}
+
+.border-warning {
+    border: 3px solid #ff0000;
+    border-radius: 5px;
+}
+
+.status-icon {
+    font-size: 35px;
+    padding: 20px;
+}
+
+.password-icon {
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #FFFFFF;
+}
+
+.password-icon > span {
+    font-size: 35px;
+}
+
+.add-icon {
+    padding: 5px;
+    font-size: 24px;
+    color: #AAA;
+}
+
+.vcenter {
+    display: inline-block;
+    vertical-align: middle;
+    float: none;
 }

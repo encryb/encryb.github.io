@@ -35,25 +35,25 @@ define([
             this.get("upvotes").set("upvoted", false);
         },
 
-        addComment: function(commentId, name, text, date, myComment) {
-            var comment = new Backbone.Model({commentId: commentId, name: name, text: text, date: date, myComment: myComment});
+        addComment: function(model) {
+            var comment = new Backbone.Model(model.attributes);
             this.get("comments").add(comment);
         },
 
-        removeComment: function(commentId) {
+        removeComment: function(id) {
             var comments = this.get("comments");
-            var comment = comments.findWhere({commentId: commentId});
+            var comment = comments.findWhere({id: id});
             if (comment) {
                 comment.destroy();
             }
         },
 
-        addFriendUpvote: function(name, pictureUrl, userId) {
+        addFriendsUpvote: function(name, pictureUrl, userId) {
             var friend = new Backbone.Model({friendId: userId, name: name, pictureUrl: pictureUrl});
             var upvotes = this.get("upvotes").get("friendUpvotes").add(friend);
         },
 
-        removeFriendUpvote: function(userId) {
+        removeFriendsUpvote: function(userId) {
             var friendUpvotes = this.get("upvotes").get("friendUpvotes");
             var friend = friendUpvotes.findWhere({friendId: userId});
             friendUpvotes.remove(friend);
@@ -67,7 +67,7 @@ define([
             var model = new PostContent(attr);
             this.set("post", model);
             this.setPostId(userId, postModel.get("id"));
-
+            this.set('userId', userId);
         },
 
         setFriendsPost: function(post, name, pictureUrl, userId) {
@@ -75,6 +75,7 @@ define([
             var model = new PostContent(attr);
             this.set("post", model);
             this.setPostId(userId, post.id);
+            this.set('userId', userId);
         },
 
         deletePost: function() {

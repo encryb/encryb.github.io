@@ -1,35 +1,46 @@
-<form class="form-horizontal">
-    <fieldset>
-
-        <!-- Form Name -->
-        <legend>My Info</legend>
-
-        <!-- Text input-->
-        <div class="form-group">
-            <label class="col-md-4 control-label" for="name">My Name</label>
-            <div class="col-md-6">
-                <input id="name" name="name" placeholder="" class="form-control input-md" required="" type="text" value="<%= name %>">
-
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="col-md-4 control-label" for="picture">Picture</label>
-            <div class="col-md-6">
-
-                <div id="profileFile" class="fileinput fileinput-new" data-provides="fileinput">
-                    <div class="img_container">
-                        <div class="fileinput-new thumbnail"><img src="<%= pictureUrl %>" /></div>
-
-                        <div id="profilePicture" class="fileinput-preview fileinput-exists thumbnail" data-trigger="fileinput">
+<div class="row">
+    <div class="col-lg-9 col-md-11 col-xs-12">
+        <h3>Public Data</h3>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-9 col-md-11 col-xs-12">
+        <div class="well well-sm clearfix">
+            <form class="form" id="profileForm">
+                <div class="row">
+                    <div class="col-xs-6">
+                        <div class="form-group top-15 clearfix">
+                            <label class="control-label" for="name">My Name</label>
+                            <input id="name" name="name" placeholder="I am Bob, who are you?" value="<%= name %>" class="form-control" type="text">
                         </div>
-                        <span class="btn-default btn-file btn-lg img_remove">
-                            <span class="glyphicon glyphicon-edit"></span><input id="picture" type="file">
-                        </span>
+                        <div class="form-group top-15 clearfix">
+                            <label class="control-label" for="name">Introduction</label>
+                            <textarea id="intro" name="name" rows="4" class="form-control"><%= intro %></textarea>
+                        </div>
+                    </div>
+
+                    <div class="col-xs-6 clearfix">
+                        <div id="profilePicture" class="fileinput fileinput-new" data-provides="fileinput">
+                            <div class="btn-toolbar bottom-5 clearfix">
+                                <div class="btn-group btn-group-sm pull-right">
+                                    <button id="applyButton" class="btn btn-success fileinput-exists">Apply</button>
+                                    <span class="btn btn-default btn-file">Change<input id="picture" type="file"></span>
+                                    <button id="cancelButton" class="btn btn-default fileinput-exists">Cancel</button>
+                                </div>
+                            </div>
+                            <div class="img_container thumbnail pull-right">
+                                <div class="fileinput-new"><img id ="profilePictureExisting" src="<%= pictureUrl %>" /></div>
+                                <div id="profilePicturePreview" class="fileinput-preview fileinput-exists"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
-
-    </fieldset>
-</form>
+    </div>
+</div>
+<div class="row top-15">
+    <div class="col-lg-9 col-md-11 col-xs-12">
+        <button id="updateButton" class="btn btn-success btn-lg <% if (name.length == 0) { print('disabled'); } %>">Update</button>
+    </div>
+</div>

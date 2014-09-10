@@ -1,40 +1,34 @@
 define([
-  'jquery',
-  'underscore',
-  'backbone',
-  'marionette',
-  'app/views/modals',
-  'require-text!app/templates/friend.html'
+    'jquery',
+    'underscore',
+    'backbone',
+    'marionette',
+    'app/app',
+    'app/views/modals',
+    'require-text!app/templates/friend.html'
 
-], function($, _, Backbone, Marionette, Modals, FriendTemplate) {
+], function ($, _, Backbone, Marionette, App, Modals, FriendTemplate) {
 
+    var FriendView = Marionette.ItemView.extend({
 
-  var FriendView = Marionette.ItemView.extend({
+        template: _.template(FriendTemplate),
 
-    // Cache the template function for a single item.
-    template: _.template( FriendTemplate ),
+        initialize: function () {
+            this.listenTo(this.model, 'change', this.render);
+        },
 
-    initialize: function() {
-      this.listenTo(this.model, 'change', this.render);
-    },
+        events: {
+            "click #friendImg": "imgClick"
+        },
 
-    events: {
-      "click #editFriend": "editFriend",
-      "click #filterFriend": "filterFriend",
-      "click #removeFriend": "removeFriend"
-    },
+        imgClick: function() {
+            App.vent.trigger("friend:selected", this.model);
+        }
 
-    filterFriend: function(){
-        console.log("Filter");
-    },
+    });
 
-    editFriend: function() {
-        Modals.showFriend(this.model);
-    },
-
-    removeFriend: function() {
-        this.model.destroy();
-    }
-  });
-  return FriendView;
+    var FriendsView = Marionette.CollectionView.extend({
+        childView: FriendView
+    });
+    return FriendsView;
 });
