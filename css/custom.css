@@ -96,7 +96,6 @@ ul.collection-list li {
     border: 1px solid #AAA;
     background: #FFF;
     border-radius: 4px;
-    width: 50%;
 }
 
 .new_comment_input {
@@ -104,7 +103,6 @@ ul.collection-list li {
     border: 1px solid #AAA;
     background: #FFF;
     border-radius: 4px;
-    width: 50%;
 }
 
 .typeahead {
@@ -180,19 +178,19 @@ ul.collection-list li {
 }
 
 .status-icon {
-    font-size: 35px;
-    padding: 20px;
+    font-size: 3rem;
+    padding: 2rem;
 }
 
 .password-icon {
     border: 2px solid #ddd;
     border-radius: 10px;
-    padding: 20px;
+    padding: 1rem;
     background-color: #FFFFFF;
 }
 
 .password-icon > span {
-    font-size: 35px;
+    font-size: 3rem;
 }
 
 .add-icon {
@@ -205,4 +203,14 @@ ul.collection-list li {
     display: inline-block;
     vertical-align: middle;
     float: none;
+}
+
+.sitelogo a {
+    text-decoration: none;
+    font-size: 2.5rem;
+}
+
+.sitelogo small {
+    color: #999;
+    font-size: 1.8rem;
 }

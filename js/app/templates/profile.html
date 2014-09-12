@@ -8,7 +8,7 @@
         <div class="well well-sm clearfix">
             <form class="form" id="profileForm">
                 <div class="row">
-                    <div class="col-xs-6">
+                    <div class="col-xs-12 col-sm-6">
                         <div class="form-group top-15 clearfix">
                             <label class="control-label" for="name">My Name</label>
                             <input id="name" name="name" placeholder="I am Bob, who are you?" value="<%= name %>" class="form-control" type="text">
@@ -19,18 +19,18 @@
                         </div>
                     </div>
 
-                    <div class="col-xs-6 clearfix">
+                    <div class="col-xs-12 col-sm-6 clearfix">
                         <div id="profilePicture" class="fileinput fileinput-new" data-provides="fileinput">
-                            <div class="btn-toolbar bottom-5 clearfix">
-                                <div class="btn-group btn-group-sm pull-right">
+                            <div class="img_container thumbnail">
+                                <div class="fileinput-new"><img id ="profilePictureExisting" src="<%= pictureUrl %>" /></div>
+                                <div id="profilePicturePreview" class="fileinput-preview fileinput-exists"></div>
+                            </div>
+                            <div class="btn-toolbar bottom-5">
+                                <div class="btn-group btn-group-sm">
                                     <button id="applyButton" class="btn btn-success fileinput-exists">Apply</button>
                                     <span class="btn btn-default btn-file">Change<input id="picture" type="file"></span>
                                     <button id="cancelButton" class="btn btn-default fileinput-exists">Cancel</button>
                                 </div>
-                            </div>
-                            <div class="img_container thumbnail pull-right">
-                                <div class="fileinput-new"><img id ="profilePictureExisting" src="<%= pictureUrl %>" /></div>
-                                <div id="profilePicturePreview" class="fileinput-preview fileinput-exists"></div>
                             </div>
                         </div>
                     </div>

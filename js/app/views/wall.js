@@ -28,6 +28,11 @@ define([
             createPost: "#createPost",
             friends: "#friends"
         },
+        ui: {
+            settingsColumn: "#settingsColumn",
+            postsColumn: "#postsColumn",
+            expandSettings: "#expandSettings"
+        },
 
             /*
         initialize: function() {
@@ -49,9 +54,16 @@ define([
              */
         events: {
             "click #addFriend": 'showAddFriendForm',
+            "click @ui.expandSettings": 'expandSettings'
         },
         triggers: {
             "click #saveManifests": 'manifests:save'
+        },
+
+        expandSettings: function() {
+            this.ui.postsColumn.toggleClass('col-xs-12 col-xs-8');
+            this.ui.settingsColumn.toggleClass('hidden-xs');
+            this.ui.expandSettings.toggleClass('glyphicon-expand glyphicon-collapse-down');
         },
 
         showAddFriendForm: function() {
