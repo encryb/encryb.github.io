@@ -1,9 +1,9 @@
 define([
-    'msgpack',
     'sjcl',
+    'app/app',
     'utils/data-convert',
     'utils/encoding'
-], function(Msgpack, Sjcl, DataConvert, Encoding){
+], function(Sjcl, App, DataConvert, Encoding){
 
     var exports = {};
 
@@ -16,7 +16,7 @@ define([
         }
         var encrypted = Sjcl.json._encrypt(key, data);
 
-        var encryptedData = encode(encrypted);
+        var encryptedData = convertFromBits(encrypted);
         encryptedData['mimeType'] = mimeType;
 
         var buf = Encoding.encode(encryptedData);
@@ -48,6 +48,8 @@ define([
     exports.saveKeys = function(secretKeyEncoded, publicKeyEncoded) {
         localStorage.setItem("secretKey", secretKeyEncoded);
         localStorage.setItem("publicKey", publicKeyEncoded);
+
+        App.vent.trigger("encryption:updated", publicKeyEncoded);
     }
 
 
@@ -135,7 +137,7 @@ define([
         return decrypted;
     }
 
-    function encode(obj) {
+    function convertFromBits(obj) {
         var result = {};
         if (obj.kemtag) {
             result['kemtag'] = fromBitsToTypedArray(obj.kemtag);
@@ -174,33 +176,6 @@ define([
         }
         return out;
     }
-
-
-    /*
-    exports.test = function() {
-
-        var key = Sjcl.ecc.elGamal.generateKeys(384,10);
-        var encodedPub = Msgpack.encode(key.pub.serialize());
-        var encodedSec = Msgpack.encode(key.sec.serialize());
-
-        var base64Pub = DataConvert.arrayToBase64(encodedPub);
-        var base64Sec = DataConvert.arrayToBase64(encodedSec);
-
-        var pubKey = Sjcl.ecc.deserialize(Msgpack.decode(encodedPub));
-        var secKey = Sjcl.ecc.deserialize(Msgpack.decode(encodedSec));
-
-        var array = [0,1,2,3,4];
-
-
-        var enc = Sjcl.encrypt(pubKey, array);
-
-        var dec = Sjcl.decrypt(secKey, enc);
-
-
-        console.log(dec);
-
-    }
-    */
 
     return exports;
 });

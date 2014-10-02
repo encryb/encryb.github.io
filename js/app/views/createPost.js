@@ -27,7 +27,7 @@ define([
 
         events: {
             'submit form': 'createPost',
-            'focusin #newPostTrigger' : "expendForm"
+            'focus #newPostTrigger' : "expendForm"
         },
 
         onRender: function(){
@@ -85,8 +85,8 @@ define([
 
             var imageElement = this.ui.newPostImage.children()[0] ;
             if (imageElement) {
-                var resizedData = ImageUtil.resize(imageElement, 400, 300);
-                var fullsizeData = imageElement.src;
+                var resizedData = ImageUtil.resize(imageElement, 300, 300);
+                var fullsizeData = ImageUtil.resize(imageElement, 1920, 1440);
                 post.set({hasImage: true, resizedImageData: resizedData, fullImageData: fullsizeData });
             }
 
@@ -100,11 +100,9 @@ define([
                 selectize.clear();
             });
 
-            console.log("Clicked post " + event);
         },
 
         expendForm: function() {
-            event.preventDefault();
             this.ui.newPostDiv.addClass("in");
             this.ui.newPostTrigger.hide();
         }

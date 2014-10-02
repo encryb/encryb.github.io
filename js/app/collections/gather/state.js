@@ -10,29 +10,31 @@ define([
     'app/collections/persist/profiles',
     'app/collections/persist/comments',
     'app/collections/persist/upvotes',
+    'app/collections/persist/invites',
     'app/models/postWrapper',
     'app/encryption',
-    'app/storage',
-    'app/remoteManifest',
-    'utils/dropbox-client'
+    'app/services/dropbox',
+    'app/remoteManifest'
 ], function(Backbone, Marionette, _, Msgpack, FilteredCollection, App,
-            PostColl, FriendColl, ProfileColl, CommentColl, UpvoteColl,
-            PostWrapper, Encryption, Storage, RemoteManifest, DropboxClient) {
+            PostColl, FriendColl, ProfileColl, CommentColl, UpvoteColl, InviteColl,
+            PostWrapper, Encryption, Dropbox, RemoteManifest) {
 
     var State = Marionette.Object.extend({
 
         initialize: function(options) {
 
-            this.myId = Backbone.DropboxDatastore.client.dropboxUid();
+            this.initialSyncCompleted = false;
+
+            this.myId = Dropbox.client.dropboxUid();
 
             this.myPosts = new PostColl();
             this.myComments = new CommentColl();
             this.myUpvotes = new UpvoteColl();
             this.myFriends = new FriendColl();
             this.myProfiles = new ProfileColl();
+            this.myInvites = new InviteColl();
 
-
-            this.friends = {};
+            this.manifestCache = {};
 
             this.posts = new Backbone.Collection();
             this.posts.comparator = function(post) {
@@ -48,6 +50,9 @@ define([
             this.upvotes = new Backbone.Collection();
             this.listenTo(this.upvotes, "add", this.dispatchUpvoteAdd);
             this.listenTo(this.upvotes, "remove", this.dispatchUpvoteRemove);
+
+            this.friendsOfFriends = [];
+
 
             this.myPosts.on("add", this.onMyPostAdded.bind(this));
             this.myPosts.on("remove", this.onMyPostRemoved.bind(this));
@@ -76,10 +81,12 @@ define([
                     this.myPosts.fetch(),
                     this.myComments.fetch(),
                     this.myUpvotes.fetch(),
-                    this.myFriends.fetch()
+                    this.myFriends.fetch(),
+                    this.myInvites.fetch()
                 ).done(function() {
-                        state.trigger("synced:full");
-                    });
+                    state.initialSyncCompleted = true;
+                    state.trigger("synced:full");
+                });
             }.bind(this));
         },
 
@@ -110,7 +117,7 @@ define([
         },
         onMyCommentRemoved: function(comment) {
             var model = this.comments.findWhere({postId: comment.get("postId")});
-            model.destroy();
+            this.comments.remove(model);
         },
         onMyUpvoteAdded: function(upvote) {
             var attr = _.extend(_.clone(upvote.attributes), {owenerId: this.myId, myUpvote: true});
@@ -119,7 +126,7 @@ define([
         },
         onMyUpvoteRemoved: function(upvote) {
             var model = this.upvotes.findWhere({postId: upvote.get("postId")});
-            model.destroy();
+            this.upvotes.remove(model);
         },
 
         onMyFriendAdded: function(friend) {
@@ -130,7 +137,7 @@ define([
                 return;
             }
 
-            Storage.downloadUrl(friendManifest).done(function (data) {
+            Dropbox.downloadUrl(friendManifest).done(function (data) {
 
                 var decData = Encryption.decryptManifestData(data);
                 var decObj = Msgpack.decode(decData.buffer);
@@ -154,6 +161,7 @@ define([
                 friend.set('userId', userId);
                 friend.save();
 
+
                 state.addCollection(friendManifest, decObj);
             });
         },
@@ -165,8 +173,8 @@ define([
                 return;
             }
 
-            if (this.friends.hasOwnProperty(manifest)) {
-                var oldFriend = this.friends[manifest];
+            if (this.manifestCache.hasOwnProperty(manifest)) {
+                var oldFriend = this.manifestCache[manifest];
 
                 RemoteManifest.compare(oldFriend, friend, function(key, action, item) {
                     if (key == "posts") {
@@ -193,10 +201,18 @@ define([
                             state.removeFriendsComment(item, friend);
                         }
                     }
+                    else if (key == "friends") {
+                        if (action == "add") {
+                            state.addFriendOfFriend(item, friend);
+                        }
+                        else{
+                            state.removeFriendOfFriend(item, friend);
+                        }
+                    }
                 });
             }
             else {
-                this.friends[manifest] = friend;
+                this.manifestCache[manifest] = friend;
                 for (var i=0; i< friend.posts.length; i++) {
                     var post = friend.posts[i];
                     state.addFriendsPost(post, friend);
@@ -211,6 +227,12 @@ define([
                     for (var i=0; i< friend.comments.length; i++) {
                         var comment = friend.comments[i];
                         state.addFriendsComment(comment, friend);
+                    }
+                }
+                if (friend.hasOwnProperty('friends')) {
+                    for (var i=0; i< friend.friends.length; i++) {
+                        var friendOfFriend = friend.friends[i];
+                        state.addFriendOfFriend(friendOfFriend, friend);
                     }
                 }
 
@@ -230,7 +252,7 @@ define([
         removeFriendsPost: function(post, friend) {
             var postId = friend['userId'] + ":" + post.id;
             var model = this.posts.findWhere({postId: postId});
-            model.destroy();
+            this.posts.remove(model);
         },
         addFriendsComment: function(comment, friend) {
             var attr = _.extend(_.clone(comment), {owenerId: friend['userId'], owner: friend['name'], myComment: false});
@@ -239,7 +261,7 @@ define([
         },
         removeFriendsComment: function(comment, friend) {
             var model = this.comments.findWhere({id: comment.id, owenerId: friend['userId']});
-            model.destroy();
+            this.comments.remove(model);
         },
 
         addFriendsUpvote: function(upvote, friend) {
@@ -249,7 +271,34 @@ define([
         },
         removeFriendsUpvote: function(post, friend) {
             var model = this.upvotes.findWhere({id: post.id, owenerId: friend['userId']});
-            model.destroy();
+            this.upvotes.remove(model);
+        },
+
+        getFriendsOfFriend: function(friendModel) {
+            var friendId = friendModel.get('userId');
+            if (!this.friendsOfFriends.hasOwnProperty(friendId)) {
+                this.friendsOfFriends[friendId] = new Backbone.Collection();
+            }
+            return this.friendsOfFriends[friendId];
+        },
+
+        addFriendOfFriend: function(friendOfFriend, friend) {
+            var friendId = friend['userId'];
+            if (!this.friendsOfFriends.hasOwnProperty(friendId)) {
+                this.friendsOfFriends[friendId] = new Backbone.Collection();
+            }
+            var model = new Backbone.Model(friendOfFriend);
+
+            this.friendsOfFriends[friendId].add(model);
+        },
+
+        removeFriendOfFriend: function(friendOfFriend, friend) {
+            var friendId = friend['userId'];
+            if (!this.friendsOfFriends.hasOwnProperty(friendId)) {
+                return;
+            }
+            var model = this.friendsOfFriends['friendId'].findWhere({userId: friendOfFriend['userId']});
+            this.friendsOfFriends['friendId'].remove(model);
         },
 
         dispatchCommentAdd: function(comment) {
@@ -272,30 +321,30 @@ define([
         },
         dispatchUpvoteAdd: function(upvote) {
             var postId = upvote.get("postId");
-            var model = this.posts.findWhere({postId: postId});
+            var post = this.posts.findWhere({postId: postId});
             // we might not have this post yet.
-            if (!model) {
+            if (!post) {
                 return;
             }
             if (upvote.get("myUpvote")) {
-                model.addMyUpvote();
+                post.addMyUpvote();
             }
             else {
-                model.addFriendsUpvote(upvote.get('name'), upvote.get('profilePictureUrl'), upvote.get('userId'));
+                post.addFriendsUpvote(upvote.get('name'), upvote.get('profilePictureUrl'), upvote.get('userId'));
             }
         },
         dispatchUpvoteRemove: function(upvote) {
             var postId = upvote.get("postId");
-            var model = this.posts.findWhere({postId: postId});
+            var post = this.posts.findWhere({postId: postId});
             // post might have been removed.
-            if (!model) {
+            if (!post) {
                 return;
             }
             if (upvote.get("myUpvote")) {
-                model.removeMyUpvote();
+                post.removeMyUpvote();
             }
             else {
-                model.removeFriendsUpvote(upvote.get('userId'));
+                post.removeFriendsUpvote(upvote.get('userId'));
             }
         },
 
@@ -320,16 +369,24 @@ define([
             manifest['posts'] = filteredPosts;
             manifest['upvotes'] = this.myUpvotes.toJSON();
             manifest['comments'] = this.myComments.toJSON();
+            manifest['friends'] = this.myFriends.toManifest(friend);
 
             var profile = this.myProfiles.getFirst();
             manifest['name'] = profile.get('name');
             manifest['intro'] = profile.get('intro');
             manifest['pictureUrl'] = profile.get('pictureUrl');
-            manifest['userId'] = Backbone.DropboxDatastore.client.dropboxUid();
+            manifest['userId'] = this.myId;
             manifest['publicKey'] = myKey;
 
             var packedManifest = new Uint8Array(Msgpack.encode(manifest));
-            return friend.saveManifest(packedManifest);
+            var deferred = $.Deferred();
+
+            var encText = Encryption.encryptWithEcc(friend.get('publicKey'),  "plain/text", packedManifest, true);
+            Dropbox.uploadDropbox(friend.get('manifestFile'), encText).done(function(stats) {
+                deferred.resolve(stats);
+            });
+
+            return deferred;
         },
 
         saveManifests: function() {

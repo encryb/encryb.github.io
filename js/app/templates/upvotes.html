@@ -1,11 +1,11 @@
 <div class="row">
-    <div class="col-lg-1">
+    <div class="col-xs-1">
         <button id="upvoteButton" type="button" class="btn btn-default <% if (upvoted == true) { %> active <% } %>">
             <span class="glyphicon glyphicon-arrow-up"></span>
-            <strong><%= sumUpvotes() %></strong>
+            <strong><%- sumUpvotes() %></strong>
         </button>
     </div>
-    <div class="col-lg-11">
+    <div class="col-xs-11">
         <div id="upvotes"></div>
     </div>
 </div>

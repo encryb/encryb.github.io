@@ -2,12 +2,11 @@ define([
     'backbone',
     'underscore',
     'sjcl',
-    'app/storage',
+    'app/services/dropbox',
     'app/encryption',
     'utils/data-convert',
-    'utils/dropbox-client',
     'utils/random'
-], function (Backbone, _, Sjcl, Storage, Encryption, DataConvert, DropboxClient, Random) {
+], function (Backbone, _, Sjcl, Storage, Encryption, DataConvert, Random) {
 
     var FOLDER_POSTS = "posts/";
 

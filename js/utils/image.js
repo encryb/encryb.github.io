@@ -40,8 +40,8 @@ define(function() {
 
     exports.resize = function(image, maxWidth, maxHeight) {
 
-        var width = image.width;
-        var height = image.height;
+        var width = image.naturalWidth;
+        var height = image.naturalHeight;
 
         if (width > height) {
             if (width > maxWidth) {

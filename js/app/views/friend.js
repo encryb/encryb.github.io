@@ -4,10 +4,9 @@ define([
     'backbone',
     'marionette',
     'app/app',
-    'app/views/modals',
     'require-text!app/templates/friend.html'
 
-], function ($, _, Backbone, Marionette, App, Modals, FriendTemplate) {
+], function ($, _, Backbone, Marionette, App, FriendTemplate) {
 
     var FriendView = Marionette.ItemView.extend({
 

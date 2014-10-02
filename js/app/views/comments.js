@@ -3,12 +3,19 @@ define([
     'underscore',
     'backbone',
     'marionette',
+    'utils/misc',
     'require-text!app/templates/comment.html',
     'require-text!app/templates/comments.html'
 
-], function($, _, Backbone, Marionette, CommentTemplate, CommmentsTemplate) {
+], function($, _, Backbone, Marionette, MiscUtils, CommentTemplate, CommmentsTemplate) {
     var CommentView = Marionette.ItemView.extend({
         template: _.template( CommentTemplate ),
+        templateHelpers: {
+            prettyTime: function() {
+                return MiscUtils.formatTime(this.date);
+            }
+        },
+
         className: "comment",
 
         events: {
@@ -16,7 +23,7 @@ define([
         },
 
 
-        deleteComment: function() {
+        deleteComment: function(event) {
             event.preventDefault();
             this.trigger("comment:delete");
         }
@@ -59,7 +66,6 @@ define([
             }
         },
         expandCommentForm: function() {
-            event.preventDefault();
             this.ui.createCommentDiv.addClass("in");
             this.ui.createCommentTrigger.hide();
             this.ui.createCommentText.focus();
@@ -70,7 +76,6 @@ define([
             this.ui.createCommentTrigger.show();
         },
         expandComments: function() {
-            event.preventDefault();
             this.model.set("expanded", true);
             this.render();
         },

@@ -172,10 +172,10 @@ define(      [
 	d.downloadFile = function(downloadUrl, isBinary, callback) {
 		var accessToken = gapi.auth.getToken().access_token;
 		var xhr = new XMLHttpRequest();
+        xhr.open('GET', downloadUrl);
         if (isBinary) {
 		    xhr.responseType = 'arraybuffer';
         }
-		xhr.open('GET', downloadUrl);
 		xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
 		xhr.onload = function() {
 			callback(xhr.response);

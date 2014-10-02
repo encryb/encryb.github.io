@@ -1,7 +1,9 @@
 define([
     'backbone',
-    'app/models/postContent'
-], function (Backbone, PostContent) {
+    'app/app',
+    'app/models/postContent',
+    'app/services/dropbox'
+], function (Backbone, App, PostContent, Dropbox) {
 
     var PostWrapper = Backbone.Model.extend({
 
@@ -61,7 +63,7 @@ define([
 
         setMyPost: function(postModel, name, pictureUrl) {
             this.postModel = postModel;
-            var userId = Backbone.DropboxDatastore.client.dropboxUid();
+            var userId = App.state.myId;
 
             var attr = _.extend(_.clone(postModel.attributes), {owner: name, profilePictureUrl: pictureUrl, myPost: true});
             var model = new PostContent(attr);

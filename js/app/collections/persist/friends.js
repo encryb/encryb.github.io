@@ -1,16 +1,28 @@
 define([
   'backbone',
-  'dropboxdatastore',
-  'app/models/friend'
-], function(Backbone, DropboxDatastore, Friend){
+  'app/models/friend',
+  'app/services/dropbox'
+], function(Backbone, Friend, Dropbox){
 
 var FriendCollection = Backbone.Collection.extend({
     model: Friend,
 
-    dropboxDatastore: new Backbone.DropboxDatastore('Friends_3'),
+    dropboxDatastore: new Backbone.DropboxDatastore('Friends_11'),
 
     initialize: function() {
         this.dropboxDatastore.syncCollection(this);
+    },
+
+    toManifest: function(excludeFriend) {
+
+        var friends = [];
+        this.each(function(friend) {
+            if (friend.get('userId') == excludeFriend.get('userId')){
+                return;
+            };
+            friends.push(_.pick(friend.attributes, "name", "userId", "pictureUrl", "intro"));
+        }, this);
+        return friends;
     }
 })
 

@@ -3,23 +3,33 @@
         <div class="well well-sm clearfix">
             <div class="row">
                 <div class="col-xs-12">
-                    <legend><%= name %></legend>
+                    <legend><%- name %></legend>
                 </div>
             </div>
             <div class="row">
                 <div class="col-xs-6">
 
-                    <img src="<%= pictureUrl %>" class="img-thumbnail img-responsive">
+                    <img src="<%- pictureUrl %>" class="img-thumbnail img-responsive">
                 </div>
 
                 <div class="col-xs-6">
                     <dl>
                         <% if (intro.length > 0) { %>
                             <dt>About</dt>
-                            <dd><%= intro %></dd>
+                            <dd><%- intro %></dd>
                         <% } %>
                     </dl>
 
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <h4>Friends</h4>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div id="friendsOfFriends"></div>
                 </div>
             </div>
         </div>

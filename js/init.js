@@ -9,10 +9,8 @@ require.config({
 
 	paths: {
 		app: '../app',
-		tpl: '../tpl',
 		utils: '../utils',
-        dropbox: 'https://www.dropbox.com/static/api/dropbox-datastores-1.1-latest',
-        dropboxdatastore: 'backbone.dropboxDatastore',
+        dropbox: 'https://www.dropbox.com/static/api/dropbox-datastores-1.2-latest',
         marionette: 'backbone.marionette',
         visibility: 'visibility-1.2.1.min'
 	},
@@ -25,7 +23,12 @@ require.config({
             deps: ['jquery'],
             exports: 'jQuery.fn.Jcrop'
         },
-		underscore: {
+        "jquery.swipebox": {
+            deps: ['jquery'],
+            exports: 'jQuery.fn.swipebox'
+        },
+
+        underscore: {
 			exports: '_'
 		},
 		backbone: {
@@ -74,10 +77,10 @@ require([
     'backbone',
     'marionette',
     'app/app',
-    'app/controllers/wall',
-    'utils/dropbox-client'
+    'app/controllers/controller',
+    'app/services/dropbox'
 ],
-function (Backbone, Marionette, App, WallContr, DropboxClient) {
+function (Backbone, Marionette, App, Controller, Dropbox) {
 
     var AppRouter = Marionette.AppRouter.extend({
         appRoutes: {
@@ -88,16 +91,15 @@ function (Backbone, Marionette, App, WallContr, DropboxClient) {
     });
 
     App.appRouter = new AppRouter({
-        controller: new WallContr()
+        controller: new Controller()
     });
 
-    if (DropboxClient.isAuthenticated()) {
+    if (Dropbox.client.isAuthenticated()) {
         App.start();
     }
     else {
-        DropboxClient.authenticate({interactive: false}, function() {
+        Dropbox.client.authenticate({interactive: false}, function() {
             App.start();
         });
     }
-    //App.start();
 });

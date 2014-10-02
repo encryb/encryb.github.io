@@ -8,18 +8,31 @@
     <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
     <link rel="stylesheet" href="css/bootstrap.css">
     <link rel="stylesheet" href="css/jasny-bootstrap.css">
-    <link rel="stylesheet" href="css/backbone-forms-bootstrap3.css">
     <link rel="stylesheet" href="css/selectize.bootstrap3.css">
     <link rel="stylesheet" href="css/jquery.Jcrop.css">
+    <link rel="stylesheet" href="css/swipebox.css">
     <link rel="stylesheet" href="css/custom.css">
 </head>
 <body>
 <div id="container" class="container">
     <div class="page-header top-15 bottom-5">
-        <span class="sitelogo"><a href=""><img class="hidden-xs" src="img/crib-md.png">Encryb <small>Private social network</small></a></span>
+        <div class="row">
+            <div class="col-xs-5 col-sm-7 col-md-7 col-lg-6">
+                <span class="sitelogo"><a href=""><img class="hidden-xs" src="img/crib-md.png">Encryb <small class="hidden-xs">Private social network</small></a></span>
+            </div>
+            <div class="col-xs-7 col-sm-5 col-md-3 col-lg-3 clearfix"">
+                <div id="headerPanel">
+                </div>
+            </div>
+
+        </div>
     </div>
     <div id="main"></div>
 </div>
+<script>
+    if (window.location.protocol != "https:")
+        window.location.href = "https:" + window.location.href.substring(window.location.protocol.length);
+</script>
 <script data-main="js/init" src="require.js"></script>
 </body>
 </html>

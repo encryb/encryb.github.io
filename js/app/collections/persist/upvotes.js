@@ -1,7 +1,8 @@
 define([
   'backbone',
-  'utils/dropbox-client'
-], function(Backbone, DropboxClient){
+  'app/services/dropbox'
+
+], function(Backbone, Dropbox){
 
 var Upvotes = Backbone.Collection.extend({
 

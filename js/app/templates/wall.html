@@ -5,51 +5,27 @@
 </div>
 
 <div class="row">
-    <!--
-    <div class="pull-right"><a href="#" id="saveManifests" class="btn btn-default" role="button">Save Manifests</a></div>
-    -->
     <div id="settingsColumn" class="hidden-xs col-xs-4 col-sm-2 col-md-2 col-lg-2">
         <div class="panel-group" id="accordion">
-            <!-- Settings -->
-            <div class="panel panel-default">
+           <!-- Invites -->
+            <div id="invitePanel" class="panel panel-default">
                 <div class="panel-heading padding-5">
                     <h4 class="panel-title text-center">
-                        <a href="#settings">
+                        <a data-toggle="collapse" data-parent="#accordion" href="#collapseInvites">
                             <div class="row">
                                 <div class="col-xs-12 col-sm-12 col-md-11 col-lg-6 vcenter">
-                                    <span style="font-size: 30px; padding: 8px 0px;" class="glyphicon glyphicon-wrench"></span>
+                                    <img class="img-responsive center-block" src="img/invites.png">
                                 </div><!--
                                 --><div class="hidden-xs hidden-sm col-md-11 col-lg-6 vcenter">
-                                    Settings
+                                    Invites
                                 </div>
                             </div>
                         </a>
                     </h4>
                 </div>
-            </div>
-            <!-- Cribs -->
-            <div class="panel panel-default">
-                <div class="panel-heading padding-5">
-                    <h4 class="panel-title text-center">
-                        <a data-toggle="collapse" data-parent="#accordion" href="#collapseCribs">
-                            <div class="row">
-                                <div class="col-xs-12 col-sm-12 col-md-11 col-lg-6 vcenter">
-                                   <img class="img-responsive center-block" src="img/cribs.png">
-                                </div><!--
-                                --><div class="hidden-xs hidden-sm col-md-11 col-lg-6 vcenter">
-                                    Cribs
-                                </div>
-                            </div>
-                        </a>
-                    </h4>
-                </div>
-                <div id="collapseCribs" class="panel-collapse collapse">
+                <div id="collapseInvites" class="panel-collapse collapse">
                     <div class="panel-body padding-5">
-                        <div class="bottom-5 text-center add-icon" style="" id="addCribs">
-                            <span class="glyphicon glyphicon-plus">
-                            </span>
-                        </div>
-                        <div id="cribs"></div>
+                        <div id="invites" class="invites"></div>
                     </div>
                 </div>
             </div>
@@ -71,23 +47,62 @@
                 </div>
                 <div id="collapseFriends" class="panel-collapse collapse">
                     <div class="panel-body padding-5">
-                        <div class="bottom-5 text-center add-icon" id="addFriend">
-                            <span class="glyphicon glyphicon-plus">
-                            </span>
+                        <a data-toggle="collapse" href="#addFriend">
+                            <div class="bottom-5 text-center add-icon">
+                                <span class="glyphicon glyphicon-plus">
+                                </span>
+                            </div>
+                        </a>
+                        <div id="addFriend" class="collapse">
+                            <div class="thumbnail bottom-5 clearfix">
+                                <div>
+                                    <label for="inviteCode">Friend Invite</label>
+                                    <input type="text" class="form-control bottom-5" id="inviteCode" placeholder="Enter Code">
+                                </div>
+                                <div>
+                                    <button class="btn btn-default pull-right" type="button" id="inviteButton">
+                                        Invite
+                                    </button>
+                                </div>
+
+                            </div>
                         </div>
+
+
                         <div id="friends"></div>
                     </div>
                 </div>
             </div>
+            <!-- Cribs -->
+            <div class="panel panel-default">
+                <div class="panel-heading padding-5">
+                    <h4 class="panel-title text-center">
+                        <a data-toggle="collapse" data-parent="#accordion" href="#collapseCribs">
+                            <div class="row">
+                                <div class="col-xs-12 col-sm-12 col-md-11 col-lg-6 vcenter">
+                                    <img class="img-responsive center-block" src="img/cribs.png">
+                                </div><!--
+                                --><div class="hidden-xs hidden-sm col-md-11 col-lg-6 vcenter">
+                                Cribs
+                            </div>
+                            </div>
+                        </a>
+                    </h4>
+                </div>
+                <div id="collapseCribs" class="panel-collapse collapse">
+                    <div class="panel-body padding-5">
+                        <div class="bottom-5 text-center add-icon" style="" id="addCribs">
+                            <span class="glyphicon glyphicon-plus">
+                            </span>
+                        </div>
+                        <div id="cribs"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <!--
-        <img src="img/friends.png">Friends <a href="#" id="addFriend" class="btn btn-default" role="button">Add</a>
--->
     </div>
     <div id="postsColumn" class="col-xs-12 col-sm-10 col-md-8 col-lg-7">
-        <div class="row">
-            <div id="friendsDetails"></div>
-        </div>
+        <div id="friendsDetails"></div>
         <div id="createPost"></div>
         <div id="posts"></div>
     </div>

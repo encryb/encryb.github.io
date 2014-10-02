@@ -1,7 +1,7 @@
 define([
     'backbone',
-    'dropboxdatastore'
-], function(Backbone, DropboxDatastore){
+    'app/services/dropbox'
+], function(Backbone, Dropbox){
 
     var ProfileModel = Backbone.Model.extend({
         defaults: {
@@ -9,7 +9,7 @@ define([
             intro: "",
             pictureFile: "",
             pictureUrl: "img/nopic.gif",
-            updated: false
+            shared: false
         }
     });
 

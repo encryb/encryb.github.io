@@ -1,7 +1,8 @@
 define([
     'backbone',
-    'app/storage'
-], function (Backbone, Storage) {
+    'app/services/dropbox',
+    'app/encryption'
+], function (Backbone, Storage, Encryption) {
 
     var PostContent = Backbone.Model.extend({
 
@@ -26,28 +27,30 @@ define([
             var deferredFullImage = null;
 
             if (model.get('textData') == null && model.get('hasText')) {
-                deferredText = Storage.downloadData(model.get('textUrl'), false, password);
+                deferredText = Storage.downloadUrl(model.get('textUrl'));
             }
             if (model.get('hasImage')) {
                 if(model.get('resizedImageData') == null) {
-                    deferredResizedImage = Storage.downloadData(model.get('resizedImageUrl'), true, password);
+                    deferredResizedImage = Storage.downloadUrl(model.get('resizedImageUrl'));
                 }
                 if(fullFetch && model.get('fullImageData') == model.defaults.fullImageData) {
-                    deferredFullImage = Storage.downloadData(model.get('fullImageUrl'), true, password);
+                    deferredFullImage = Storage.downloadData(model.get('fullImageUrl'));
                 }
             }
 
             $.when(deferredText, deferredResizedImage, deferredFullImage)
-                .done(function (textResp, resizedImageResp, fullImageResp) {
+                .done(function (encryptedText, encryptedResizedImage, encryptedFullImage) {
+
                     var updates = {};
-                    if(textResp != null) {
-                        updates['textData'] = textResp;
+
+                    if(encryptedText != null) {
+                        updates['textData'] = Encryption.decryptTextData(encryptedText, password);
                     }
-                    if(resizedImageResp != null) {
-                        updates['resizedImageData'] = resizedImageResp;
+                    if(encryptedResizedImage != null) {
+                        updates['resizedImageData'] = Encryption.decryptImageData(encryptedResizedImage, password);
                     }
-                    if (fullImageResp != null) {
-                        updates['fullImageData'] = fullImageResp;
+                    if (encryptedFullImage != null) {
+                        updates['fullImageData'] = Encryption.decryptImageData(encryptedFullImage, password);
                     }
                     model.set(updates);
                     deferred.resolve();

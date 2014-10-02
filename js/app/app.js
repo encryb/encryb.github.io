@@ -8,6 +8,7 @@ define([
         var App = new Marionette.Application();
 
         App.addRegions({
+            headerPanel: '#headerPanel',
             main: '#main'
         });
 

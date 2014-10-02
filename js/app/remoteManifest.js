@@ -62,6 +62,7 @@ define([
         updateField('pictureUrl', oldManifest, newManifest, callback);
         updateArray('posts', oldManifest, newManifest, callback);
         updateArray('upvotes', oldManifest, newManifest, callback);
+        updateArray('friends', oldManifest, newManifest, callback);
     }
 
     return exports;

@@ -1,21 +1,23 @@
 <div class="row">
     <div class="col-xs-12">
-        <strong><%= owner %></strong>
-        <div class="small">
-            <%= new Date(date).toLocaleString() %>
-        </div>
-    </div>
-    <div class="col-xs-12">
-        <%= text %>
+        <strong><%- owner %></strong>
+        <span class="small">
+            <%- prettyTime() %>
+        </span>
         <% if (myComment) { %>
         <div class="dropdown pull-right">
             <button class="btn btn-default dropdown-toggle" type="button" id="commentDropdown" data-toggle="dropdown">
                 <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu" role="menu" aria-labelledby="commentDropdown">
+            <ul class="dropdown-menu dropdown-menu-right" role="menu" aria-labelledby="commentDropdown">
                 <li role="presentation"><a id="deleteComment" role="menuitem" tabindex="-1" href="#">Delete</a></li>
             </ul>
         </div>
         <% } %>
+    </div>
+    <div class="col-xs-12">
+        <div>
+            <%- text %>
+        </div>
     </div>
 </div>

@@ -67,6 +67,10 @@ d.decode = function(buffer) {
         var label = indexToLabel[index];
         var size = view.getUint32(offset + 1);
 
+        // make sure we don't over allocate
+        if (size > (buffer.byteLength - offset + 5)) {
+            return;
+        }
         var data = new Uint8Array(size);
         data.set(new Uint8Array(view.buffer, offset + 5 , size), 0);
         offset += 5 + data.length;

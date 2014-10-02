@@ -1,6 +1,6 @@
 <% if (displayAbout) { %>
 <div class="row">
-    <div class="col-lg-9 col-md-11 col-xs-12">
+    <div class="col-lg-10 col-md-11 col-xs-12">
         <div id="about" class="jumbotron clearfix">
             <h1>
                 Welcome to Encryb!
@@ -19,22 +19,24 @@
 <% } %>
 
 <div class="row bottom-5">
-    <div class="col-lg-4 col-md-5 col-xs-6">
+    <div class="col-lg-4 col-sm-5 col-xs-12">
         <div class="well well-sm <% if (!dropboxEnabled) { %> border-warning <% } %> clearfix">
-            <div class="pull-left">
-                <span class="glyphicon <% if (dropboxEnabled) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
-            </div>
-            <div class="pull-right">
-                <img class="img-responsive" src="img/dropbox.png">
+            <div class="row">
+                <div class="col-xs-4 pull-left">
+                    <span class="glyphicon <% if (dropboxEnabled) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
+                </div>
+                <div class="col-xs-8 pull-right">
+                    <img class="img-responsive" src="img/dropbox.png">
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-4 col-xs-4">
+    <div class="col-lg-3 col-sm-4 col-xs-8">
         <% if (!dropboxEnabled) { %>
             <p class="lead text-danger">Dropbox access not authorized.</p>
         <% } %>
     </div>
-    <div class="col-xs-2">
+    <div class="col-sm-3 col-xs-4">
         <div class="btn-group-vertical pull-right">
             <% if (dropboxEnabled) { %>
                 <button type="button" id="dropboxLogout" class="btn btn-default">Logout</button>
@@ -45,44 +47,46 @@
     </div>
 </div>
 
-<div class="row bottom-5 border <% if (!dropboxEnabled && !keysLoaded) { %> hide <% } %>">
-    <div class="col-lg-4 col-md-5 col-xs-6">
+<div class="row top-15 bottom-5 border <% if (!dropboxEnabled && !keysLoaded) { %> hide <% } %>">
+    <div class="col-lg-4 col-sm-5 col-xs-12">
         <div class="well well-sm <% if (!keysLoaded) { %>border-warning<% } %> clearfix">
-            <div class="pull-left">
-                <span class="glyphicon <% if (keysLoaded) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
-            </div>
-            <div class="pull-right password-icon">
-                <span class="glyphicon glyphicon-asterisk"></span>
-                <span class="glyphicon glyphicon-asterisk"></span>
-                <span class="glyphicon glyphicon-asterisk"></span>
-                <span class="glyphicon glyphicon-lock"></span>
-
+            <div class="row">
+                <div class="col-xs-4 pull-left">
+                    <span class="glyphicon <% if (keysLoaded) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
+                </div>
+                <div class="col-xs-8 pull-right">
+                    <div class="password-icon">
+                        <span class="glyphicon glyphicon-asterisk"></span>
+                        <span class="glyphicon glyphicon-asterisk"></span>
+                        <span class="glyphicon glyphicon-asterisk"></span>
+                        <span class="glyphicon glyphicon-lock"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-4 col-xs-4">
+    <div class="col-lg-3 col-sm-4 col-xs-8">
         <% if (!keysLoaded) { %>
             <p class="lead text-danger">Encryption keys not found.</p>
         <% } %>
     </div>
-    <div class="col-xs-2">
+    <div class="col-sm-3 col-xs-4">
         <div class="btn-group-vertical pull-right">
             <% if (!keysLoaded) { %>
                 <button type="button" id="createNewKeysButton" class="btn btn-default">Create New Keys</button>
                 <span class="btn btn-default btn-file">Upload Keys<input id="uploadKeysInput" type="file" /></span>
                 <button type="button" id="loadKeysFromDropboxButton" class="btn btn-default">Load from Dropbox</button>
-                <button type="button" id="loadKeysFromGoogleButton" class="btn btn-default">Load from Google</button>
             <% } else { %>
                 <button type="button" id="removeKeysButton" class="btn btn-default">Remove Keys</button>
                 <button type="button" id="downloadKeysButton" class="btn btn-default">Download Keys</button>
-                <button type="button" id="saveKeysToGoogleButton" class="btn btn-default">Backup to Google</button>
+                <button type="button" id="saveKeysToDropboxButton" class="btn btn-default">Save to Dropbox</button>
             <% } %>
         </div>
     </div>
 </div>
 <% if (dropboxEnabled && keysLoaded) { %>
 <div class="row bottom-5">
-    <div class="col-lg-9 col-md-11 col-xs-12">
+    <div class="col-lg-10 col-md-11 col-xs-12">
         <button id="continueButton" class="btn btn-success btn-lg">Continue</button>
     </div>
 </div>
