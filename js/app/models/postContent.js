@@ -34,7 +34,7 @@ define([
                     deferredResizedImage = Storage.downloadUrl(model.get('resizedImageUrl'));
                 }
                 if(fullFetch && model.get('fullImageData') == model.defaults.fullImageData) {
-                    deferredFullImage = Storage.downloadData(model.get('fullImageUrl'));
+                    deferredFullImage = Storage.downloadUrl(model.get('fullImageUrl'));
                 }
             }
 
