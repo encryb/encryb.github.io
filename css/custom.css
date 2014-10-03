@@ -218,3 +218,7 @@ ul.collection-list li {
     padding: 1px;
     margin-left:10px;
 }
+
+.word-wrap {
+    word-wrap: break-word;
+}

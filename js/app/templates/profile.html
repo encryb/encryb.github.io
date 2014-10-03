@@ -35,9 +35,22 @@
                         </div>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <label for="currentKey">Current Public Key</label>
+                        <div id="currentKey" class="alert word-wrap" role="alert"><%- getPublicKey() %></div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <label for="publishedKey">Published Key</label>
+                        <div id="publishedKey" class="alert word-wrap <% if(getPublicKey() != publicKey) {%> alert-danger <% } %>" role="alert"><%- publicKey %></div>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
+
 </div>
 <div class="row top-15">
     <div class="col-lg-9 col-md-11 col-xs-12">

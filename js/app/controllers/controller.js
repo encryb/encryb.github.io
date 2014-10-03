@@ -33,12 +33,7 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
 
         initialize: function() {
             var controller = this;
-            App.vent.on("encryption:updated", function(publicKey) {
-                controller._publishProfile();
-            });
-            App.vent.on("profile:updated", function(profile) {
-                controller._publishProfile();
-            });
+
             App.vent.on("invite:send", function(friendId) {
                controller._inviteFriend(friendId);
             });
@@ -264,6 +259,11 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
                 this._profile();
                 return;
             }
+            var publicKey = Encryption.getEncodedKeys().publicKey;
+            if (publicKey != profile.get("publicKey")) {
+                this._profile();
+                return;
+            }
 
             var headerPanel = new HeaderPanelView({model: profile});
             App.headerPanel.show(headerPanel);
@@ -440,12 +440,17 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
                             deferred.resolve();
                         });
                     }
+                    var publicKey = Encryption.getEncodedKeys().publicKey;
+                    if (publicKey != model.get("publicKey")) {
+                        model.set("publicKey", publicKey);
+                    }
 
                     $.when.apply($, deferreds).done(function() {
                         model.save();
                         controller.showWall();
                         App.appRouter.navigate("");
                         App.vent.trigger("profile:updated", model);
+                        controller._publishProfile();
                     });
                 });
             });

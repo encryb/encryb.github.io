@@ -4,14 +4,21 @@ define([
     'backbone',
     'jcrop',
     'marionette',
+    'app/encryption',
     'utils/image',
     'require-text!app/templates/profile.html'
 
-], function($, _, Backbone, Jcrop, Marionette, ImageUtil, ProfileTemplate){
+], function($, _, Backbone, Jcrop, Marionette, Encryption, ImageUtil, ProfileTemplate){
 
     var ProfileView = Marionette.ItemView.extend({
 
         template: _.template( ProfileTemplate ),
+
+        templateHelpers: {
+            getPublicKey: function() {
+                return Encryption.getEncodedKeys().publicKey;
+            }
+        },
 
         initialize: function() {
             console.log("Create Profile View", this.model);

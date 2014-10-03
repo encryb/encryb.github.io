@@ -1,9 +1,8 @@
 define([
     'sjcl',
-    'app/app',
     'utils/data-convert',
     'utils/encoding'
-], function(Sjcl, App, DataConvert, Encoding){
+], function(Sjcl, DataConvert, Encoding){
 
     var exports = {};
 
@@ -49,7 +48,6 @@ define([
         localStorage.setItem("secretKey", secretKeyEncoded);
         localStorage.setItem("publicKey", publicKeyEncoded);
 
-        App.vent.trigger("encryption:updated", publicKeyEncoded);
     }
 
 

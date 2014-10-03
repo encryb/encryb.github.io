@@ -9,6 +9,7 @@ define([
             intro: "",
             pictureFile: "",
             pictureUrl: "img/nopic.gif",
+            publicKey: "none",
             shared: false
         }
     });
