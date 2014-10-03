@@ -64,10 +64,14 @@ define([
                 ],
                 callback : function(values) {
                     view.trigger("keys:create");
-                    view.promptForPassword();
                     for (var i=0; i<values.length; i++) {
                         var value = values[i];
-                        view.trigger(value);
+                        if (value == "keys:download") {
+                            view.trigger(value);
+                        }
+                        else if (value =="keys:saveToDropbox") {
+                            view.saveKeyToDropbox();
+                        }
                     }
 
                 }
@@ -89,7 +93,8 @@ define([
         _passwordDialog: function() {
             var deferred = $.Deferred();
             Bootbox.dialog({
-                title: "Enter password",
+                title: "Enter password. Keep this password safe, as it is not stored on Encryb, and you will not be able\
+                    to recover the encryption keys without it",
                 message: PasswordTemplate,
                 buttons: {
                     success: {
