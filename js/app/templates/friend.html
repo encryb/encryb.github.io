@@ -1,4 +1,5 @@
 <div class="thumbnail bottom-5">
+    <% if (invite == true) { %><div class="alert alert-warning">INVITE</div><% } %>
     <div><strong><%- name %></strong></div>
     <img class=img-responsive" style="max-height: 120px" id="friendImg" src="<%- pictureUrl %>">
 </div>

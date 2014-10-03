@@ -19,7 +19,9 @@ define([
             friendsDetails: "#friendsDetails",
             createPost: "#createPost",
             friends: "#friends",
+            invitePreview: "#invitePreview",
             invites: "#invites"
+
         },
         ui: {
             settingsColumn: "#settingsColumn",
@@ -62,8 +64,8 @@ define([
         },
 
         inviteFriend: function() {
-            var userId = this.ui.inviteCode.val();
-            App.vent.trigger("invite:send", userId);
+            var friendId = this.ui.inviteCode.val();
+            App.vent.trigger("invite:find", friendId);
         }
     });
 

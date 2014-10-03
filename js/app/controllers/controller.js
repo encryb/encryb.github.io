@@ -11,13 +11,14 @@ define([
     'app/views/friend',
     'app/views/headerPanel',
     'app/views/invites',
+    'app/views/invitePreview',
     'app/encryption',
     'app/services/dropbox',
     'utils/data-convert',
     'utils/random'
     ],
 function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
-          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView,
+          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView, InvitePreviewView,
           Encryption, Dropbox, DataConvert, RandomUtil) {
 
 
@@ -34,9 +35,7 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
         initialize: function() {
             var controller = this;
 
-            App.vent.on("invite:send", function(friendId) {
-               controller._inviteFriend(friendId);
-            });
+
             App.vent.on("invite:accept", function(inviteModel){
                 controller._acceptInvite(inviteModel);
             });
@@ -65,28 +64,6 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
 
         },
 
-        _inviteFriend: function(friendId) {
-            var controller = this;
-            require(["appengine!encrybuser"], function (AppEngine) {
-                AppEngine.getProfile({id: friendId}).execute(function(profile) {
-                    if (!profile.publicKey) {
-                        return;
-                    }
-                    var createUser = controller._createUser(friendId, profile.name, profile.intro,
-                        profile.pictureUrl, profile.publicKey);
-                    $.when(createUser).done(function(friend) {
-                        friend.set("invited", true);
-                        friend.save();
-
-                        AppEngine.invite({id: App.state.myId,
-                            idToInvite: friendId,
-                            manifestUrl: friend.get("manifestUrl")}
-                        ).execute(function(resp){});
-                    });
-
-                });
-            });
-        },
 
 
         _createUser: function(id, name, intro, pictureUrl, publicKey) {
@@ -152,7 +129,7 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
             });
         },
         _checkAccepts: function() {
-            if (!App.state.myFriends.findWhere({invited: true})) {
+            if (!App.state.myFriends.findWhere({invite: true})) {
                 // no pending invites
                 return;
             }
@@ -171,10 +148,10 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
 
                         var friendModel = App.state.myFriends.findWhere({userId: acceptEntity.userId});
 
-                        if (!friendModel.get("invited")) {
+                        if (!friendModel.get("invite")) {
                             console.log("Friend already accepted invite", friendModel);
                         }
-                        var changes = {invited:false, friendsManifest: acceptEntity.manifestUrl};
+                        var changes = {invite:false, friendsManifest: acceptEntity.manifestUrl};
 
                         var confirmAccept = function(acceptId) {
                             return function() {
@@ -315,6 +292,38 @@ function (Backbone, Marionette, App, State, PermissionColl, FriendModel,
                     wall.friendsDetails.show(details);
                 });
             });
+
+            App.vent.on("invite:find", function(friendId) {
+                require(["appengine!encrybuser"], function (AppEngine) {
+                    AppEngine.getProfile({id: friendId}).execute(function (profile) {
+                        if (profile.error || !profile.publicKey) {
+                            return;
+                        }
+
+                        var model = new Backbone.Model(profile);
+                        var invitePreviewView = new InvitePreviewView({model: model});
+                        wall.invitePreview.show(invitePreviewView);
+                    });
+                });
+            });
+            var controller = this;
+            App.vent.on("invite:send", function(inviteModel) {
+                var createUser = controller._createUser(inviteModel.get("id"), inviteModel.get("name"),
+                    inviteModel.get("intro"), inviteModel.get("pictureUrl"), inviteModel.get("publicKey"));
+                $.when(createUser).done(function(friend) {
+                    friend.set("invite", true);
+                    friend.save();
+                    require(["appengine!encrybuser"], function (AppEngine) {
+                        AppEngine.invite({id: App.state.myId,
+                                idToInvite: friend.get("userId"),
+                                manifestUrl: friend.get("manifestUrl")}
+                        ).execute(function (resp) {
+                            wall.invitePreview.reset();
+                        });
+                    })
+                });
+            })
+
 
             if (App.state.initialSyncCompleted) {
                 this._checkAccepts();

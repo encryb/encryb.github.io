@@ -12,7 +12,8 @@ define([
             manifestUrl: "",
             friendsManifest: "",
             pictureUrl: "img/nopic.gif",
-            intro: ""
+            intro: "",
+            invite: false
         }
 
     });

@@ -5,7 +5,7 @@ define([
 
 var InviteCollection = Backbone.Collection.extend({
 
-    dropboxDatastore: new Backbone.DropboxDatastore('Invites_16'),
+    dropboxDatastore: new Backbone.DropboxDatastore('Invites_17'),
 
     initialize: function() {
         this.dropboxDatastore.syncCollection(this);
