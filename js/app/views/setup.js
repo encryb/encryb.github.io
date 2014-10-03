@@ -123,10 +123,6 @@ define([
             });
             return deferred;
         }
-
-
-
-
     });
     return SetupView;
 });

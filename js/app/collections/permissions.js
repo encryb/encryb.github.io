@@ -28,7 +28,7 @@ define([
         addFriend: function (friend) {
             var permissions = this;
             $.when(friend.save()).done(function(){
-                var permission = new PermissionModel({id: friend.get('id'), display: friend.get('account')});
+                var permission = new PermissionModel({id: friend.get('id'), display: friend.get('name')});
                 permissions.add(permission);
             });
         },
