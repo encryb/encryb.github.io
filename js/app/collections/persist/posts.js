@@ -15,6 +15,20 @@ var Posts = Backbone.Collection.extend({
 
     comparator: function(post) {
         return -post.get('created');
+    },
+
+    toManifest: function(friend) {
+        var filteredPosts = [];
+        this.each(function(post) {
+            var permissions = post.get("permissions");
+            if (!permissions ||
+                $.inArray("all", permissions) > -1 ||
+                $.inArray(friend.get('id'), permissions) > -1
+                ) {
+                filteredPosts.push(_.omit(post.toJSON(), 'permissions'));
+            }
+        }, this);
+        return filteredPosts;
     }
 })
 

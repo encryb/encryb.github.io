@@ -28,8 +28,29 @@ define([
             postsColumn: "#postsColumn",
             expandSettings: "#expandSettings",
             inviteButton: "#inviteButton",
-            inviteCode: "#inviteCode"
+            inviteCode: "#inviteCode",
+            invitePanel: "#invitePanel",
+            friendsPanel: "#friendsPanel"
         },
+
+        onRender: function() {
+            var view = this;
+            this.ui.friendsPanel.on('show.bs.collapse', function (e) {
+                view.ui.friendsPanel.removeClass("glow");
+            });
+            this.ui.invitePanel.on('show.bs.collapse', function (e) {
+                view.ui.invitePanel.removeClass("glow");
+            });
+        },
+
+        glowFriends: function() {
+            this.ui.friendsPanel.addClass("glow");
+        },
+
+        glowInvites: function() {
+            this.ui.invitePanel.addClass("glow");
+        },
+
 
             /*
         initialize: function() {
@@ -53,9 +74,7 @@ define([
             "click @ui.expandSettings": "expandSettings",
             "click @ui.inviteButton": "inviteFriend"
         },
-        triggers: {
-            "click #saveManifests": "manifests:save"
-        },
+
 
         expandSettings: function() {
             this.ui.postsColumn.toggleClass('col-xs-12 col-xs-8');

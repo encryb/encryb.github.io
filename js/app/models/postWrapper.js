@@ -46,7 +46,7 @@ define([
             var comments = this.get("comments");
             var comment = comments.findWhere({id: id});
             if (comment) {
-                comment.destroy();
+                comments.remove(comment);
             }
         },
 

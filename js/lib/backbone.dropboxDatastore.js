@@ -227,16 +227,46 @@
       return datastorePromise;
     },
 
+    createSharedDatastore: function() {
+      var defer = Backbone.$.Deferred();
+      var _this = this;
+
+       this.getDatastoreManager().createDatastore(function(error, datastore) {
+         if (error) {
+           defer.reject(error);
+         }
+         else {
+           datastore.setRole("public", "viewer");
+
+             _this._datastorePromises[datastore.getId()] = defer;
+             defer.resolve(datastore);
+           }
+        });
+
+        return defer;
+    },
+
     _createDatastorePromise: function(datastoreId) {
       var defer = Backbone.$.Deferred();
 
-      this.getDatastoreManager()._getOrCreateDatastoreByDsid(datastoreId, _.bind(function(error, datastore) {
-        if (error) {
-          defer.reject(error);
-        } else {
-          defer.resolve(datastore);
-        }
-      }, this));
+      if (datastoreId[0] == (".")) {
+          this.getDatastoreManager().openDatastore(datastoreId, _.bind(function (error, datastore) {
+              if (error) {
+                  defer.reject(error);
+              } else {
+                  defer.resolve(datastore);
+              }
+          }, this));
+      }
+      else {
+          this.getDatastoreManager()._getOrCreateDatastoreByDsid(datastoreId, _.bind(function (error, datastore) {
+              if (error) {
+                  defer.reject(error);
+              } else {
+                  defer.resolve(datastore);
+              }
+          }, this));
+      }
 
       return defer.promise();
     },

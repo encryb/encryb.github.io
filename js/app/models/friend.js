@@ -8,9 +8,6 @@ define([
     var Friend = Backbone.Model.extend({
 
         defaults: {
-            manifestFile: "",
-            manifestUrl: "",
-            friendsManifest: "",
             pictureUrl: "img/nopic.gif",
             intro: "",
             invite: false

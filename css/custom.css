@@ -222,3 +222,7 @@ ul.collection-list li {
 .word-wrap {
     word-wrap: break-word;
 }
+
+.glow {
+    box-shadow: 0px 0px 8px #0095FF;
+}

@@ -7,7 +7,7 @@ define([
 var FriendCollection = Backbone.Collection.extend({
     model: Friend,
 
-    dropboxDatastore: new Backbone.DropboxDatastore('Friends_12'),
+    dropboxDatastore: new Backbone.DropboxDatastore('Friends_14'),
 
     initialize: function() {
         this.dropboxDatastore.syncCollection(this);

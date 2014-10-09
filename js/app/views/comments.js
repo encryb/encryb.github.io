@@ -59,7 +59,6 @@ define([
             expandComments: '#expandComments'
         },
         checkForCollapse: function() {
-            console.log("Check for Collapse");
             var text = this.ui.createCommentText.val();
             if (!text || text.length === 0) {
                 this.collapseCommentForm();
@@ -94,7 +93,6 @@ define([
             this.trigger("comment:submit", attr);
 
             this.collapseCommentForm();
-            console.log("comment added", attr);
         },
         collectionEvents: {
             "add": "render",

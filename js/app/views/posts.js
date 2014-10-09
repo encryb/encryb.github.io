@@ -38,7 +38,7 @@ define([
                 postView.submitComment(attr);
             });
             commentsView.on("childview:comment:delete", function(comment) {
-                postView.trigger("comment:delete", comment.model.get("commentId"));
+                postView.trigger("comment:delete", comment.model.get("id"));
             });
         },
         events: {
@@ -68,24 +68,28 @@ define([
         childView: PostView,
         initialize: function() {
             this.on("childview:post:delete", function(post){
-                setTimeout(function(){App.state.saveManifests()}, 100);
+                setTimeout(function(){
+                    App.vent.trigger("post:deleted")
+                }, 100);
             });
 
             this.on("childview:post:like", function(postView, id){
                 App.state.myUpvotes.toggleUpvote(id);
-                App.state.saveManifests();
+                App.vent.trigger("post:liked");
             });
 
             this.on("childview:comment:submit", function(postView, comment) {
                 App.state.myComments.addComment(comment['postId'], comment['text'], comment['date']);
-                App.state.saveManifests();
+                App.vent.trigger("comment:created");
             });
 
             this.on("childview:comment:delete", function(postView, commentId) {
                 var comment = App.state.myComments.findWhere({id:commentId});
                 if (comment) {
                     comment.destroy();
-                    setTimeout(function(){App.state.saveManifests()}, 100);
+                    setTimeout(function(){
+                        App.vent.trigger("comment:deleted");
+                    }, 100);
                 }
             });
         }

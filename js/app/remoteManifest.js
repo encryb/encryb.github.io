@@ -58,9 +58,8 @@ define([
     }
 
     exports.compare = function(oldManifest, newManifest, callback) {
-        updateField('name', oldManifest, newManifest, callback);
-        updateField('pictureUrl', oldManifest, newManifest, callback);
         updateArray('posts', oldManifest, newManifest, callback);
+        updateArray('comments', oldManifest, newManifest, callback);
         updateArray('upvotes', oldManifest, newManifest, callback);
         updateArray('friends', oldManifest, newManifest, callback);
     }
