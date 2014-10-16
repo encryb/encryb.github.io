@@ -16,6 +16,9 @@ define([
             this.set("upvotes", upvotes);
 
             var commentsColl = new Backbone.Collection();
+            commentsColl.comparator = function(comment) {
+                return comment.get("date"); // Note the minus!
+            };
             this.set("comments", commentsColl);
 
 
@@ -50,34 +53,33 @@ define([
             }
         },
 
-        addFriendsUpvote: function(name, pictureUrl, userId) {
-            var friend = new Backbone.Model({friendId: userId, name: name, pictureUrl: pictureUrl});
+        addFriendsUpvote: function(friend) {
             var upvotes = this.get("upvotes").get("friendUpvotes").add(friend);
         },
 
         removeFriendsUpvote: function(userId) {
             var friendUpvotes = this.get("upvotes").get("friendUpvotes");
-            var friend = friendUpvotes.findWhere({friendId: userId});
+            var friend = friendUpvotes.findWhere({userId: userId});
             friendUpvotes.remove(friend);
         },
 
-        setMyPost: function(postModel, name, pictureUrl) {
+        setMyPost: function(postModel, myInfo) {
             this.postModel = postModel;
-            var userId = App.state.myId;
 
-            var attr = _.extend(_.clone(postModel.attributes), {owner: name, profilePictureUrl: pictureUrl, myPost: true});
+            var attr = _.extend(_.clone(postModel.attributes), {poster: myInfo, myPost: true});
             var model = new PostContent(attr);
             this.set("post", model);
+            var userId = myInfo.get("userId");
             this.setPostId(userId, postModel.get("id"));
             this.set('userId', userId);
         },
 
-        setFriendsPost: function(post, name, pictureUrl, userId) {
-            var attr = _.extend(post, {owner: name, profilePictureUrl: pictureUrl, myPost: false});
+        setFriendsPost: function(post, friend) {
+            var attr = _.extend(post, {poster: friend, myPost: false});
             var model = new PostContent(attr);
             this.set("post", model);
-            this.setPostId(userId, post.id);
-            this.set('userId', userId);
+            this.setPostId(friend.get("userId"), post.id);
+            this.set('userId', friend.get("userId"));
         },
 
         deletePost: function() {

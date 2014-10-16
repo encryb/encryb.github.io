@@ -229,21 +229,24 @@
 
     createSharedDatastore: function() {
       var defer = Backbone.$.Deferred();
-      var _this = this;
 
-       this.getDatastoreManager().createDatastore(function(error, datastore) {
+       this.getDatastoreManager().createDatastore(_.bind(function(error, datastore) {
          if (error) {
            defer.reject(error);
          }
          else {
            datastore.setRole("public", "viewer");
 
-             _this._datastorePromises[datastore.getId()] = defer;
+             this._datastorePromises[datastore.getId()] = defer;
              defer.resolve(datastore);
            }
-        });
+        }, this));
 
         return defer;
+    },
+    deleteDatastore: function(datastoreId) {
+        delete this._datastorePromises[datastoreId];
+        this.getDatastoreManager().deleteDatastore(datastoreId);
     },
 
     _createDatastorePromise: function(datastoreId) {

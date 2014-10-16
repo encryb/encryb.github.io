@@ -2,17 +2,34 @@
     <div class="col-xs-12">
         <div class="well well-sm clearfix">
             <div class="row">
+
+                <% if(invite) { %>
                 <div class="col-xs-12">
-                    <legend><%- name %></legend>
+                    <div class="alert alert-warning"><strong>Invite</strong></div>
+                </div>
+                <% } %>
+                <div class="col-xs-12">
+                    <legend class="clearfix">
+                        <span class="pull-left">
+                            <%- name %>
+                            <% if(!isInvitePreview() && favorite) { %> <span class="glyphicon glyphicon-glass"></span> <% } %>
+                        </span>
+                        <span id="unselectFriend" class="pull-right close-icon glyphicon glyphicon-remove"></span>
+                    </legend>
                 </div>
             </div>
             <div class="row">
                 <div class="col-xs-6">
-
                     <img src="<%- pictureUrl %>" class="img-thumbnail img-responsive">
                 </div>
 
                 <div class="col-xs-6">
+
+
+                    <dl>
+                        <dt>Code</dt>
+                        <dd><small><%- userId %></small></dd>
+                    </dl>
                     <dl>
                         <% if (intro.length > 0) { %>
                             <dt>About</dt>
@@ -22,16 +39,23 @@
 
                 </div>
             </div>
-            <div class="row">
+            <div id="commonFriends"></div>
+            <div id="otherFriends"></div>
+            <div class="row top-15">
                 <div class="col-xs-12">
-                    <h4>Friends</h4>
+                    <div class="btn-group pull-right">
+                        <% if (isInvitePreview()) { %>
+                            <button id="inviteButton" type="button" class="btn btn-default">Invite</button>
+                        <% } else { %>
+                            <button id="unfriendButton" type="button" class="btn btn-danger">Unfriend</button>
+                            <button id="favoriteButton" type="button" class="btn btn-default <% if(favorite) { %> active <% } %>">
+                                <span class="glyphicon glyphicon-glass"></span>Favorite
+                            </button>
+                        <% } %>
+                    </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-xs-12">
-                    <div id="friendsOfFriends"></div>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>

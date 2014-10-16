@@ -7,7 +7,6 @@ define([
     'app/app',
     'app/collections/persist/posts',
     'app/collections/persist/friends',
-    'app/collections/persist/profiles',
     'app/collections/persist/comments',
     'app/collections/persist/upvotes',
     'app/collections/persist/invites',
@@ -16,22 +15,32 @@ define([
     'app/services/dropbox',
     'app/remoteManifest'
 ], function(Backbone, Marionette, _, Msgpack, FilteredCollection, App,
-            PostColl, FriendColl, ProfileColl, CommentColl, UpvoteColl, InviteColl,
+            PostColl, FriendColl,  CommentColl, UpvoteColl, InviteColl,
             PostWrapper, Encryption, Dropbox, RemoteManifest) {
 
     var State = Marionette.Object.extend({
 
         initialize: function(options) {
 
-            this.initialSyncCompleted = false;
-
             this.myId = Dropbox.client.dropboxUid();
+            this.myModel = new Backbone.Model();
+
+            var profile = options.profile;
+            this.myModel.set("name", profile.get("name"));
+            this.myModel.set("pictureUrl", profile.get("pictureUrl"));
+            this.myModel.set("userId", this.myId);
+
+            this.listenTo(profile, "change:name", function(model){
+                this.myModel.set("name", model.get("name"));
+            });
+            this.listenTo(profile,"change:profileUrl", function(model){
+                this.myModel.set("profileUrl", model.get("profileUrl"));
+            });
 
             this.myPosts = new PostColl();
             this.myComments = new CommentColl();
             this.myUpvotes = new UpvoteColl();
             this.myFriends = new FriendColl();
-            this.myProfiles = new ProfileColl();
             this.myInvites = new InviteColl();
 
             this.posts = new Backbone.Collection();
@@ -64,31 +73,36 @@ define([
             App.vent.on("friend:selected", function(friendModel){
                 App.state.filterByUser(friendModel.get('userId'));
             });
+            App.vent.on("friend:unselect", function(){
+               App.state.unsetFilter();
+            });
         },
 
         fetchAll: function() {
-            $.when(this.myProfiles.fetch()).done(function () {
-                this.profilePictureUrl = this.myProfiles.getFirst().get('pictureUrl');
-                this.name = this.myProfiles.getFirst().get('name');
 
-                var state = this;
-                state.trigger("synced:profile");
-                $.when(
-                    this.myPosts.fetch(),
-                    this.myComments.fetch(),
-                    this.myUpvotes.fetch(),
-                    this.myFriends.fetch(),
-                    this.myInvites.fetch()
-                ).done(function() {
-                    state.initialSyncCompleted = true;
-                    state.trigger("synced:full");
-                });
-            }.bind(this));
+            if (this.fetchPromise) {
+                return this.fetchPromise;
+            }
+
+            var deferred = $.Deferred();
+            this.fetchPromise = deferred.promise();
+            var state = this;
+
+            $.when(
+                state.myPosts.fetch(),
+                state.myComments.fetch(),
+                state.myUpvotes.fetch(),
+                state.myFriends.fetch(),
+                state.myInvites.fetch()
+            ).done(function() {
+                deferred.resolve(state);
+            });
+            return this.fetchPromise;
         },
 
         onMyPostAdded: function(post) {
             var wrapper = new PostWrapper();
-            wrapper.setMyPost(post, this.name, this.profilePictureUrl);
+            wrapper.setMyPost(post, this.myModel);
             this.posts.add(wrapper);
             var postComments = this.comments.where({postId: wrapper.get("postId")});
             for (var i=0; i<postComments.length; i++) {
@@ -102,7 +116,7 @@ define([
                     wrapper.addMyUpvote();
                 }
                 else {
-                    wrapper.addFriendsUpvote(upvote.get("owner"), upvote.get("profilePictureUrl"), upvote.get("ownerId"));
+                    wrapper.addFriendsUpvote(upvote.get("friend"));
                 }
             }
         },
@@ -112,12 +126,13 @@ define([
             model.destroy();
         },
         onMyCommentAdded: function(comment) {
-            var attr = _.extend(_.clone(comment.attributes), {owenerId: this.myId, owner: this.name, myComment: true});
+
+            var attr = _.extend(_.clone(comment.attributes), {commenter: this.myModel, myComment: true});
             var model = new Backbone.Model(attr);
             this.comments.add(model);
         },
         onMyCommentRemoved: function(comment) {
-            var model = this.comments.findWhere({postId: comment.get("postId")});
+            var model = this.comments.findWhere({postId: comment.get("postId"), commenter: this.myModel});
             this.comments.remove(model);
         },
         onMyUpvoteAdded: function(upvote) {
@@ -133,7 +148,7 @@ define([
 
         addFriendsPost: function(post, friend) {
             var wrapper = new PostWrapper();
-            wrapper.setFriendsPost(post, friend.get('name'), friend.get('pictureUrl'), friend.get('userId'));
+            wrapper.setFriendsPost(post, friend);
             this.posts.add(wrapper);
             var postComments = this.comments.where({postId: wrapper.get("postId")});
             for (var i=0; i<postComments.length; i++) {
@@ -147,7 +162,7 @@ define([
                     wrapper.addMyUpvote();
                 }
                 else {
-                    wrapper.addFriendsUpvote(upvote.get("owner"), upvote.get("profilePictureUrl"), upvote.get("ownerId"));
+                    wrapper.addFriendsUpvote(upvote.get("friend"));
                 }
             }
         },
@@ -157,18 +172,19 @@ define([
             this.posts.remove(model);
         },
         addFriendsComment: function(comment, friend) {
-            var attr = _.extend(_.clone(comment), {owenerId: friend.get('userId'), owner: friend.get('name'), myComment: false});
+            var attr = _.extend(_.clone(comment), {commenter: friend, myComment: false});
             var model = new Backbone.Model(attr);
             this.comments.add(model);
         },
         removeFriendsComment: function(comment, friend) {
-            var model = this.comments.findWhere({id: comment.id, owenerId: friend.get('userId')});
+            var model = this.comments.findWhere({id: comment.id, commenter: friend});
             this.comments.remove(model);
         },
 
         addFriendsUpvote: function(upvote, friend) {
-            var attr = _.extend(_.clone(upvote), {owenerId: friend.get('userId'), owner: friend.get('name'), profilePictureUrl: friend.get('pictureUrl')});
-            var model = new Backbone.Model(attr);
+            var model = new Backbone.Model();
+            model.set("postId", upvote.postId);
+            model.set("friend", friend);
             this.upvotes.add(model);
         },
         removeFriendsUpvote: function(post, friend) {
@@ -181,7 +197,19 @@ define([
             if (!this.friendsOfFriends.hasOwnProperty(friendId)) {
                 this.friendsOfFriends[friendId] = new Backbone.Collection();
             }
-            return this.friendsOfFriends[friendId];
+            var friends =  this.friendsOfFriends[friendId];
+
+            var commonFriends = new Backbone.Collection();
+            var otherFriends = new Backbone.Collection();
+            friends.each(function(friend) {
+                if (this.myFriends.findWhere({userId: friend.get("userId")})){
+                    commonFriends.add(friend);
+                }
+                else {
+                    otherFriends.add(friend);
+                }
+            }, this);
+            return {otherFriends: otherFriends, commonFriends: commonFriends};
         },
 
         addFriendOfFriend: function(friendOfFriend, friend) {
@@ -232,7 +260,7 @@ define([
                 post.addMyUpvote();
             }
             else {
-                post.addFriendsUpvote(upvote.get('name'), upvote.get('profilePictureUrl'), upvote.get('userId'));
+                post.addFriendsUpvote(upvote.get("friend"));
             }
         },
         dispatchUpvoteRemove: function(upvote) {

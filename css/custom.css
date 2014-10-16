@@ -155,15 +155,22 @@ ul.collection-list li {
 }
 
 .upvote-thumbnail {
-    position: relative;
-    float: left;
-    display: inline-block;
     width: auto;
     max-height: 36px;
     padding: 1px;
     background-color: #fff;
     border: 2px solid #ddd;
     border-radius: 2px;
+    cursor: pointer;
+    cursor: hand;
+}
+
+.post-thumbnail {
+    border: 2px solid #ddd;
+    border-radius: 2px;
+    padding: 1px;
+    cursor: pointer;
+    cursor: hand;
 }
 
 .border-warning {
@@ -174,6 +181,12 @@ ul.collection-list li {
 .status-icon {
     font-size: 3rem;
     padding: 2rem;
+}
+
+.close-icon {
+    font-size: 2rem;
+    cursor: pointer;
+    cursor: hand;
 }
 
 .password-icon {
@@ -195,6 +208,11 @@ ul.collection-list li {
     display: inline-block;
     vertical-align: middle;
     float: none;
+}
+
+.vertical-align {
+    display: flex;
+    align-items: center;
 }
 
 .sitelogo a {
@@ -225,4 +243,15 @@ ul.collection-list li {
 
 .glow {
     box-shadow: 0px 0px 8px #0095FF;
+}
+
+.alert-sm {
+    padding: 5px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.friend {
+    padding: 10px 2px;
+    border-top: 2px solid #DDD;
 }

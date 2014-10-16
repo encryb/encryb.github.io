@@ -14,16 +14,12 @@ define([
 
         template: _.template( ProfileTemplate ),
 
-        templateHelpers: {
-            getPublicKey: function() {
-                return Encryption.getEncodedKeys().publicKey;
-            }
+        initialize: function() {
+            this.listenTo(this.model.get("profile"), "change", this.render);
+            this.listenTo(this.model, "change", this.render);
         },
 
-        initialize: function() {
-            console.log("Create Profile View", this.model);
-            this.changes = {};
-        },
+        changes : {},
 
         ui: {
             profilePicture: "#profilePicture",
@@ -38,6 +34,11 @@ define([
             "click @ui.profilePicture #cancelButton": "pictureCancelButton",
             "click @ui.profilePicture #applyButton": "pictureApplyButton",
             "click @ui.updateButton": "updateProfile"
+        },
+
+        triggers: {
+            "click #editKey" : "key:edit",
+            "click #cloudRefresh": "key:cloudRefresh"
         },
 
         updateProfile: function() {

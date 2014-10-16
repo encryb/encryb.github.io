@@ -19,7 +19,6 @@ define([
             friendsDetails: "#friendsDetails",
             createPost: "#createPost",
             friends: "#friends",
-            invitePreview: "#invitePreview",
             invites: "#invites"
 
         },
@@ -51,30 +50,10 @@ define([
             this.ui.invitePanel.addClass("glow");
         },
 
-
-            /*
-        initialize: function() {
-
-            var minute = 60 * 1000;
-            Visibility.every(3 * minute, 15 * minute, function () {
-                var refresh = wall.state.refreshPosts.bind(app);
-                refresh();
-            });
-
-            Visibility.change(function (e, state) {
-                if (state == "visible") {
-                    var refresh = wall.refreshPosts.bind(app);
-                    refresh();
-                }
-            })
-        },
-
-             */
         events: {
             "click @ui.expandSettings": "expandSettings",
             "click @ui.inviteButton": "inviteFriend"
         },
-
 
         expandSettings: function() {
             this.ui.postsColumn.toggleClass('col-xs-12 col-xs-8');

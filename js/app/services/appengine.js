@@ -73,7 +73,7 @@ function ($, Backbone, Marionette, App, Encryption) {
                     for (var i = 0; i < resp.items.length; i++) {
                         var inviteEntity = resp.items[i];
 
-                        AppEngine.inviteReceived({id: inviteEntity.id, inviteeId: App.state.myId}).execute(function (resp) {
+                        AppEngine.inviteReceived({id: inviteEntity.userId, inviteeId: App.state.myId}).execute(function (resp) {
                         });
                     }
 
@@ -113,24 +113,26 @@ function ($, Backbone, Marionette, App, Encryption) {
 
         publishProfile: function () {
             require(["appengine!encrybuser"], function (AppEngine) {
-                var profile = App.state.myProfiles.getFirst();
+                $.when(App.getProfile()).done(function(profile){
 
-                var publicKey = Encryption.getEncodedKeys().publicKey;
+                    var publicKey = Encryption.getEncodedKeys().publicKey;
 
-                // $TODO this logic needs to be improved
-                if (profile.get('name').length < 1 || !publicKey) {
-                    return;
-                }
+                    // $TODO this logic needs to be improved
+                    if (profile.get('name').length < 1 || !publicKey) {
+                        return;
+                    }
 
-                var args = {id: App.state.myId,
-                    name: profile.get('name'),
-                    intro: profile.get('intro'),
-                    pictureUrl: profile.get('pictureUrl'),
-                    publicKey: publicKey};
-                console.log("Calling set profile", args);
-                AppEngine.setProfile(args).execute(function (resp) {
-                    profile.set("shared", true);
-                    profile.save();
+                    var args = {id: App.state.myId,
+                        name: profile.get('name'),
+                        intro: profile.get('intro'),
+                        pictureUrl: profile.get('pictureUrl'),
+                        publicKey: publicKey};
+                    console.log("Calling set profile", args);
+                    AppEngine.setProfile(args).execute(function (resp) {
+                        profile.set("shared", true);
+                        profile.save();
+                    });
+
                 });
 
 

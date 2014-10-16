@@ -18,7 +18,13 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
         notifyFriendPromises: {},
         notifyMePromises: {},
 
+        setFriendAdapter: function(friends) {
+            friends.on("add", this.attachFriend.bind(this));
+            this.friends = friends;
+        },
+
         createFriend: function (inviteModel) {
+            var friendAdapter = this;
             var deferred = $.Deferred();
 
             var manifestFile = "manifests" + "/" + RandomUtil.makeId();
@@ -39,7 +45,7 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
 
             $.when(Backbone.DropboxDatastore.createSharedDatastore()).then(function (datastore) {
                 attrs['myDatastoreId'] = datastore.getId();
-                App.state.myFriends.create(attrs, {
+                friendAdapter.friends.create(attrs, {
                     success: function (model) {
                         deferred.resolve(model);
                     }
@@ -48,7 +54,24 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
             });
             return deferred;
         },
-
+        deleteFriend: function(friendModel) {
+            var manifestFile = friendModel.get("manifestFile");
+            Backbone.DropboxDatastore.deleteDatastore(friendModel.get("myDatastoreId"));
+            if (friendModel.has("friendsDatastoreId")) {
+                Backbone.DropboxDatastore.deleteDatastore(friendModel.get("friendsDatastoreId"));
+            }
+            Dropbox.remove(manifestFile);
+            this.removeCollection(friendModel);
+            friendModel.destroy();
+        },
+        sendUpdatedProfile: function(changes) {
+            var friendAdapter = this;
+            App.state.myFriends.each(function(friend) {
+                $.when(friendAdapter._getModelUsedToNotifyFriend(friend)).done(function(notifyModel){
+                    notifyModel.save(changes);
+                });
+            });
+        },
         _getModelUsedToNotifyMe: function(friend) {
             var friendId = friend.get("userId");
             if (this.notifyMePromises.hasOwnProperty(friendId)) {
@@ -87,9 +110,19 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
             }
             $.when(this._getModelUsedToNotifyMe(friend)).done(function(notifyModel) {
                 friendAdapter.syncFriendsFeed(friend, notifyModel);
-                notifyModel.on("change", function(model, options) {
+                notifyModel.on("change:lastUpdated", function(model, options) {
                    friendAdapter.syncFriendsFeed(friend, model);
                 });
+                notifyModel.on("change:name", function(model, options) {
+                    friend.save({name : model.get("name")});
+                });
+                notifyModel.on("change:intro", function(model, options) {
+                    friend.save({intro : model.get("intro")});
+                });
+                notifyModel.on("change:pictureUrl", function(model, options) {
+                    friend.save({pictureUrl : model.get("pictureUrl")});
+                });
+
             });
         },
 
@@ -116,9 +149,8 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
 
         updateDatastoreProfile: function(friend) {
             var friendAdapter = this;
-            var profile = App.state.myProfiles.getFirst();
-            $.when(this._getModelUsedToNotifyFriend(friend)).done(
-                function(notifyModel) {
+            $.when(this._getModelUsedToNotifyFriend(friend), App.getProfile()).done(
+                function(notifyModel, profile) {
                     var changes = {
                         name: profile.get('name'),
                         intro: profile.get('intro'),
@@ -206,12 +238,22 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
                 var decryptedData = Encryption.decryptManifestData(data);
                 var manifest = Msgpack.decode(decryptedData.buffer);
 
-                friendAdapter.addCollection(friend, manifest);
+                friendAdapter.updateCollection(friend, manifest);
             });
         },
 
+        removeCollection: function(friend) {
 
-        addCollection: function(friend, manifest) {
+            var manifest = {};
+            manifest['posts'] = [];
+            manifest['upvotes'] = [];
+            manifest['comments'] = [];
+            manifest['friends'] = [];
+
+            this.updateCollection(friend, manifest);
+        },
+
+        updateCollection: function(friend, manifest) {
             var state  = App.state;
 
             var friendId = friend.get("userId");
@@ -265,13 +307,13 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
                         state.addFriendsUpvote(upvote, friend);
                     }
                 }
-                if (friend.hasOwnProperty('comments')) {
+                if (manifest.hasOwnProperty('comments')) {
                     for (var i=0; i< manifest.comments.length; i++) {
                         var comment = manifest.comments[i];
                         state.addFriendsComment(comment, friend);
                     }
                 }
-                if (friend.hasOwnProperty('friends')) {
+                if (manifest.hasOwnProperty('friends')) {
                     for (var i=0; i< manifest.friends.length; i++) {
                         var friendOfFriend = manifest.friends[i];
                         state.addFriendOfFriend(friendOfFriend, friend);

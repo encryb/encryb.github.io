@@ -54,7 +54,7 @@ define([
     exports.removeKeys = function() {
         localStorage.removeItem("secretKey");
         localStorage.removeItem("publicKey");
-    },
+    };
 
     exports.publicHexToKey = function(publicKeyEncoded) {
 
@@ -62,14 +62,14 @@ define([
         var publicKey = new Sjcl.ecc.elGamal.publicKey(Sjcl.ecc.curves.c384, publicKeyBits);
 
         return publicKey;
-    },
+    };
 
     exports.secretHexToKey = function(secretKeyEncoded) {
         var secretKeyBits = new Sjcl.bn(secretKeyEncoded);
         var secretKey = new Sjcl.ecc.elGamal.secretKey(Sjcl.ecc.curves.c384, secretKeyBits);
         return secretKey;
 
-    },
+    };
 
     exports.getKeys = function() {
         var secretKeyEncoded = localStorage.getItem("secretKey");
@@ -83,7 +83,7 @@ define([
             publicKey: exports.publicHexToKey(publicKeyEncoded),
             secretKey: exports.secretHexToKey(secretKeyEncoded)
         };
-    }
+    };
 
     exports.getEncodedKeys = function() {
         var secretKeyEncoded = localStorage.getItem("secretKey");
@@ -93,7 +93,7 @@ define([
             secretKey: secretKeyEncoded
         };
 
-    }
+    };
 
     function decrypt(data, password) {
 

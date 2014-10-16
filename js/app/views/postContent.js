@@ -4,10 +4,11 @@ define([
     'backbone',
     'marionette',
     'jquery.swipebox',
+    'app/app',
     'utils/misc',
     'require-text!app/templates/postContent.html'
 
-], function($, _, Backbone, Marionette, Swipebox, MiscUtils, PostContentTemplate){
+], function($, _, Backbone, Marionette, Swipebox, App, MiscUtils, PostContentTemplate){
 
     var PostContentView = Marionette.ItemView.extend({
 
@@ -29,6 +30,7 @@ define([
 
         initialize: function() {
             this.model.fetchPost(false);
+            this.listenTo(this.model.get("poster"), "change", this.render);
         },
 
         'modelEvents': {
@@ -37,7 +39,7 @@ define([
 
         events: {
             "click #resizedImage": "showImage",
-            "click #deletePost": "deletePost"
+            "click .post-thumbnail": "clickedPosterPicture"
         },
 
         showImage: function(){
@@ -57,7 +59,15 @@ define([
                 }
 
             });
+        },
+
+        clickedPosterPicture: function() {
+            if (this.model.get("myPost")) {
+                return false;
+            }
+            App.vent.trigger("friend:selected", this.model.get("poster"));
         }
+
 
     });
     return PostContentView;

@@ -12,16 +12,14 @@ define([
     'app/views/friend',
     'app/views/headerPanel',
     'app/views/invites',
-    'app/views/invitePreview',
     'app/encryption',
     'app/services/appengine',
     'app/services/dropbox',
-    'utils/data-convert',
-    'utils/random'
+    'utils/data-convert'
     ],
 function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, FriendModel,
-          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView, InvitePreviewView,
-          Encryption, AppEngine, Dropbox, DataConvert, RandomUtil) {
+          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView,
+          Encryption, AppEngine, Dropbox, DataConvert) {
 
 
     function startDownload(uri, name) {
@@ -45,57 +43,52 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             return true;
         },
 
-
-        _loadState: function(callback) {
-
+        _loadProfile: function(callback) {
             if(!this._checkSettings()) {
                 this.settings(true);
                 return;
             }
-            if (App.state) {
-                callback();
-                return;
-            }
-            App.state = new State();
-            App.state.on("synced:profile", function() {
-               callback();
+            var controller = this;
+            $.when(App.getProfile()).done(function(profile){
+                if (profile.get('name').length == 0) {
+                    controller._profile(profile);
+                    return;
+                }
+                var publicKey = Encryption.getEncodedKeys().publicKey;
+                if (publicKey != profile.get("publicKey")) {
+                    controller._profile(profile);
+                    return;
+                }
+                callback(profile);
             });
 
-            App.state.myFriends.on("add", FriendAdapter.attachFriend.bind(FriendAdapter));
-            App.state.fetchAll();
         },
 
+
+        _setupState: function(profile) {
+
+            if (!App.state) {
+                App.state = new State({profile: profile});
+                FriendAdapter.setFriendAdapter(App.state.myFriends);
+            }
+
+
+        },
         showWall: function() {
-            this._loadState(this._showWall.bind(this));
+            this._loadProfile(this._showWall.bind(this));
         },
-        _showWall: function () {
 
-            var profile = App.state.myProfiles.getFirst();
-            if (profile.get('name').length == 0) {
-                this._profile();
-                return;
-            }
-            var publicKey = Encryption.getEncodedKeys().publicKey;
-            if (publicKey != profile.get("publicKey")) {
-                this._profile();
-                return;
-            }
+
+        _showWall: function (profile) {
+
+            this._setupState(profile);
+            App.state.fetchAll();
 
             var headerPanel = new HeaderPanelView({model: profile});
             App.headerPanel.show(headerPanel);
 
             var wall = new WallView();
             App.main.show(wall);
-
-            wall.on("manifests:save", function() {
-                FriendAdapter.saveManifests();
-            });
-
-            App.vent.on("post:created", FriendAdapter.saveManifests);
-            App.vent.on("post:deleted", FriendAdapter.saveManifests);
-            App.vent.on("post:liked", FriendAdapter.saveManifests);
-            App.vent.on("comment:created", FriendAdapter.saveManifests);
-            App.vent.on("comment:deleted", FriendAdapter.saveManifests);
 
             var postsView = new PostsView({
                 collection: App.state.filteredPosts
@@ -114,15 +107,6 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             });
             wall.friends.show(friendsView);
 
-            /*
-            var showInvites = App.state.myInvites.length > 0;
-            if (showInvites) {
-                $("#invitePanel").show();
-            }
-            else {
-                $("#invitePanel").hide();
-            }*/
-
             var invitesView = new InvitesView({
                 collection: App.state.myInvites
             });
@@ -138,26 +122,41 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             }
 
             // hide invites panel if there are no invites
-            App.state.myInvites.on("all", showHideInvites);
+            this.listenTo(App.state.myInvites, "all", showHideInvites);
 
-
-            App.vent.on("invite:added", function() {
+            wall.listenTo(App.vent, "invite:added", function() {
                 wall.glowInvites();
             });
-            App.vent.on("friend:added", function() {
+            wall.listenTo(App.vent, "friend:added", function() {
                 wall.glowFriends();
             });
 
-            App.vent.on("friend:selected", function(friendModel) {
+
+            var showFriend = function(friendModel) {
                 require(["app/views/friendsDetails"], function (FriendsDetailsView) {
 
                     var friendsOfFriend = App.state.getFriendsOfFriend(friendModel);
-                    var details = new FriendsDetailsView({model: friendModel, collection: friendsOfFriend});
+                    var details = new FriendsDetailsView({model: friendModel,
+                        commonFriends: friendsOfFriend.commonFriends, otherFriends: friendsOfFriend.otherFriends});
                     wall.friendsDetails.show(details);
                 });
+            };
+
+            wall.listenTo(App.vent, "friend:selected", function(friendModel) {
+                showFriend(friendModel);
+                window.scrollTo(0,0);
             });
 
-            App.vent.on("invite:find", function(friendId) {
+            wall.listenTo(App.vent, "friend:unselect", function(){
+                wall.friendsDetails.empty();
+            });
+
+            wall.listenTo(App.vent, "invite:find", function(friendId) {
+                var friendModel = App.state.myFriends.findWhere({userId: friendId});
+                if (friendModel) {
+                    showFriend(friendModel);
+                    return;
+                }
                 $.when(AppEngine.findProfile(friendId)).done(function(profile){
                     var model = new Backbone.Model();
 
@@ -167,24 +166,26 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                     model.set("pictureUrl", profile.pictureUrl);
                     model.set("publicKey", profile.publicKey);
 
-
-                    var invitePreviewView = new InvitePreviewView({model: model});
-                    wall.invitePreview.show(invitePreviewView);
+                    require(["app/views/friendsDetails"], function (FriendsDetailsView) {
+                        var details = new FriendsDetailsView({model: model, invitePreview: true});
+                        wall.friendsDetails.show(details);
+                        window.scrollTo(0,0);
+                    });
                 });
             });
 
             var controller = this;
-            App.vent.on("invite:send", function(inviteModel) {
+            wall.listenTo(App.vent, "invite:send", function(inviteModel) {
                 $.when(FriendAdapter.createFriend(inviteModel)).done(function(friendModel) {
                     AppEngine.invite(friendModel);
                     // hide the invite details from the wall
-                    wall.invitePreview.reset();
+                    wall.friendsDetails.reset();
                     FriendAdapter.updateDatastoreProfile(friendModel);
                 });
             });
 
 
-            App.vent.on("invite:accept", function(inviteModel){
+            wall.listenTo(App.vent, "invite:accept", function(inviteModel){
                 $.when(FriendAdapter.createFriend(inviteModel)).done(function(friendModel) {
                     AppEngine.acceptInvite(friendModel);
                     FriendAdapter.updateDatastoreProfile(friendModel);
@@ -193,17 +194,22 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
 
             });
 
+            wall.listenTo(App.vent, "friend:unfriend", function(friendModel) {
+               FriendAdapter.deleteFriend(friendModel);
+            });
 
-            if (App.state.initialSyncCompleted) {
+            wall.listenTo(App.vent, "post:created", FriendAdapter.saveManifests);
+            wall.listenTo(App.vent, "post:deleted", FriendAdapter.saveManifests);
+            wall.listenTo(App.vent, "post:liked", FriendAdapter.saveManifests);
+            wall.listenTo(App.vent, "comment:created", FriendAdapter.saveManifests);
+            wall.listenTo(App.vent, "comment:deleted", FriendAdapter.saveManifests);
+
+
+
+            $.when(App.state.fetchAll()).done(function(){
                 controller._processAccepts();
                 controller._processInvites();
-            }
-            else {
-                App.state.on("synced:full", function() {
-                    controller._processAccepts();
-                    controller._processInvites();
-                });
-            }
+            });
 
             if (!profile.get('shared')) {
                 AppEngine.publishProfile();
@@ -241,10 +247,6 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                 for (var i = 0; i < invites.length; i++) {
                     var inviteEntity = invites[i];
 
-                    var existingInvites = App.state.myInvites.where({userId: inviteEntity.userId});
-                    if (existingInvites.length > 0) {
-                        continue;
-                    }
                     var attr = {
                         userId: inviteEntity.userId,
                         name: inviteEntity.name,
@@ -254,8 +256,17 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                         friendsDatastoreId: inviteEntity.datastoreId
                     };
 
+                    var existingInvite = App.state.myInvites.findWhere({userId: inviteEntity.userId});
 
-                    App.state.myInvites.create(attr, {wait: true});
+                    if (existingInvite) {
+                        existingInvite.save(attr);
+                        console.log("updated existing invite");
+                    }
+                    else {
+                        App.state.myInvites.create(attr, {wait: true});
+                        console.log("created new invite");
+                    }
+
                     App.vent.trigger("invite:added");
                 }
 
@@ -299,6 +310,7 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                     Encryption.createKeys();
                     model.set("keysLoaded", true);
                 });
+
                 setupView.on("keys:remove", function () {
                     Encryption.removeKeys();
                     model.set("keysLoaded", false);
@@ -337,24 +349,40 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
         },
 
         profile: function() {
-            this._loadState(this._profile.bind(this));
+            this._loadProfile(this._profile.bind(this));
         },
-        _profile: function() {
+        _profile: function(profile) {
 
             var controller = this;
 
-            var model = App.state.myProfiles.getFirst();
             require(["app/views/profile"], function (ProfileView) {
+                var model = new Backbone.Model();
+                model.set("profile", profile);
+                model.set("publicKey", Encryption.getEncodedKeys().publicKey)
                 var profileView = new ProfileView({model: model});
                 App.main.show(profileView);
 
+                profileView.on("key:edit", function() {
+                    controller.settings();
+                });
+
+                profileView.on("key:cloudRefresh", function() {
+                    $.when(AppEngine.findProfile(Dropbox.client.dropboxUid())).done(function(profile){
+                        if(profile.publicKey) {
+                            model.set("publicKey", profile.publicKey);
+                        }
+                        else {
+                            model.set("publicKey", "none");
+                        }
+                    });
+                });
                 profileView.on('profile:updated', function(changes) {
                     var deferreds = [];
                     if ('name' in changes) {
-                        model.set('name', changes['name']);
+                        profile.set('name', changes['name']);
                     }
                     if ('intro' in changes) {
-                        model.set('intro', changes['intro']);
+                        profile.set('intro', changes['intro']);
                     }
                     if('picture' in changes) {
                         var resized = changes['picture'];
@@ -364,21 +392,29 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                         var picture = DataConvert.dataUriToTypedArray(resized);
                         Dropbox.uploadDropbox("profilePic",  picture['data']).then(Dropbox.shareDropbox).done(function(url) {
                             console.log("URL", url);
-                            model.set('pictureUrl', url);
+                            profile.set('pictureUrl', url);
                             deferred.resolve();
                         });
                     }
                     var publicKey = Encryption.getEncodedKeys().publicKey;
-                    if (publicKey != model.get("publicKey")) {
-                        model.set("publicKey", publicKey);
+                    if (publicKey != profile.get("publicKey")) {
+                        profile.set("publicKey", publicKey);
                     }
 
                     $.when.apply($, deferreds).done(function() {
-                        model.save();
+                        var profileChanges = profile.changedAttributes();
                         controller.showWall();
                         App.appRouter.navigate("");
-                        App.vent.trigger("profile:updated", model);
-                        controller._publishProfile();
+
+                        if (profileChanges) {
+                            controller._setupState(profile);
+                            $.when(App.state.fetchAll()).done(function() {
+                                FriendAdapter.sendUpdatedProfile(profileChanges);
+                                AppEngine.publishProfile();
+                                profile.save();
+                            });
+                        }
+
                     });
                 });
             });

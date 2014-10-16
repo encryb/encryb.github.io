@@ -10,7 +10,8 @@ define([
         defaults: {
             pictureUrl: "img/nopic.gif",
             intro: "",
-            invite: false
+            invite: false,
+            favorite: false
         }
 
     });

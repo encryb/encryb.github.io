@@ -77,6 +77,7 @@ define([
         expandComments: function() {
             this.model.set("expanded", true);
             this.render();
+            return false;
         },
         createComment: function() {
             event.preventDefault();

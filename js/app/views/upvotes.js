@@ -3,13 +3,28 @@ define([
   'underscore',
   'backbone',
   'marionette',
+  'app/app',
   'require-text!app/templates/upvote.html',
   'require-text!app/templates/upvotes.html'
 
-], function($, _, Backbone, Marionette, UpvoteTemplate, UpvotesTemplate) {
+], function($, _, Backbone, Marionette, App, UpvoteTemplate, UpvotesTemplate) {
 
   var UpvoteView = Marionette.ItemView.extend({
-      template: _.template( UpvoteTemplate )
+      template: _.template( UpvoteTemplate ),
+
+      tagName: "span",
+
+      ui: {
+          upvotePicture: '.upvote-thumbnail'
+      },
+
+      events: {
+          'click @ui.upvotePicture': 'clickedUpvotePicture'
+      },
+
+      clickedUpvotePicture: function() {
+          App.vent.trigger("friend:selected", this.model);
+      }
   });
 
   var UpvotesView = Marionette.CompositeView.extend({
@@ -23,7 +38,9 @@ define([
               return sum;
           }
       },
+
       childView: UpvoteView,
+
       childViewContainer: "#upvotes",
       modelEvents: {
           "change": "render"
