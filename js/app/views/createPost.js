@@ -26,9 +26,20 @@ define([
             });
         },
 
+        ui: {
+            postSubmitButton: '#postSubmitButton',
+            newPostTrigger: '#newPostTrigger',
+            newPostText: '#newPostText',
+            newPostImage: '#newPostImage',
+            newPostForm: '#newPostForm',
+            newPostDiv: '#newPostDiv',
+            permissions: "#permissions",
+            loadingImage: ".loading-img"
+        },
+
         events: {
             'submit form': 'createPost',
-            'focus #newPostTrigger' : "expendForm"
+            'focus @ui.newPostTrigger' : "expendForm"
         },
 
         onRender: function(){
@@ -63,17 +74,11 @@ define([
         },
 
 
-        ui: {
-            newPostTrigger: '#newPostTrigger',
-            newPostText: '#newPostText',
-            newPostImage: '#newPostImage',
-            newPostForm: '#newPostForm',
-            newPostDiv: '#newPostDiv',
-            permissions: "#permissions"
-        },
-
         createPost: function(event) {
             event.preventDefault();
+
+            this.ui.postSubmitButton.addClass("hide");
+            this.ui.loadingImage.removeClass("hide");
 
             var selectize = this.ui.permissions[0].selectize;
 
@@ -98,6 +103,10 @@ define([
                 newPostView.ui.newPostForm.trigger('reset');
                 newPostView.ui.newPostDiv.removeClass("in");
                 newPostView.ui.newPostTrigger.show();
+
+                newPostView.ui.postSubmitButton.removeClass("hide");
+                newPostView.ui.loadingImage.addClass("hide");
+
                 newPostView.trigger("post:submit", post);
 
                 selectize.clear();

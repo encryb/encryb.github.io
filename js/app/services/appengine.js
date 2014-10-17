@@ -103,7 +103,7 @@ function ($, Backbone, Marionette, App, Encryption) {
 
                     for (var i = 0; i < resp.items.length; i++) {
                         var acceptEntity = resp.items[i];
-                        AppEngine.acceptReceived({id: acceptEntity.id, inviterId: App.state.myId}).execute(function (resp) {});
+                        AppEngine.acceptReceived({id: acceptEntity.userId, inviterId: App.state.myId}).execute(function (resp) {});
                     }
 
                 });

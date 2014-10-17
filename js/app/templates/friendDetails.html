@@ -3,7 +3,7 @@
         <div class="well well-sm clearfix">
             <div class="row">
 
-                <% if(invite) { %>
+                <% if(!isInvitePreview() && invite) { %>
                 <div class="col-xs-12">
                     <div class="alert alert-warning"><strong>Invite</strong></div>
                 </div>

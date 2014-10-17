@@ -3,7 +3,7 @@
 
 
 require.config({
-	waitSeconds : 15,
+	waitSeconds : 30,
 
 	baseUrl: 'js/lib',
 
