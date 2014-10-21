@@ -19,7 +19,8 @@ define([
             friendsDetails: "#friendsDetails",
             createPost: "#createPost",
             friends: "#friends",
-            invites: "#invites"
+            invites: "#invites",
+            chats: "#chats"
 
         },
         ui: {

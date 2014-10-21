@@ -17,11 +17,15 @@ define([
         },
 
         events: {
-            "click #friendImg": "imgClick"
+            "click #friendImg": "imgClick",
+            "click #chatButton": "openChat"
         },
 
         imgClick: function() {
             App.vent.trigger("friend:selected", this.model);
+        },
+        openChat: function() {
+            App.vent.trigger("friend:chat", this.model);
         }
 
     });

@@ -154,6 +154,27 @@ ul.collection-list li {
     margin-right: 15px;
 }
 
+.margin-right-5 {
+    margin-right: 5px;
+}
+
+.post-container {
+    margin-right: -15px;
+    margin-bottom: -5px;
+}
+
+.post-container > div {
+    margin-right: 15px;
+    margin-bottom: 5px;
+}
+
+.post-text:before {
+    content: "";
+    width: 10em;
+    display: block;
+    overflow: hidden;
+}
+
 .upvote-thumbnail {
     width: auto;
     max-height: 36px;
@@ -254,4 +275,37 @@ ul.collection-list li {
 .friend {
     padding: 10px 2px;
     border-top: 2px solid #DDD;
+}
+
+.overlay {
+    z-index: 5;
+    position: fixed;
+    bottom:0;
+    right:0;
+}
+
+.collapsing {
+    -webkit-transition: none;
+    transition: none;
+}
+
+.chat
+{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+
+.pointer-hand {
+    cursor: pointer;
+    cursor: hand;
+}
+
+.relative-pos {
+    position: relative;
+}
+
+.rotate {
+    transform:rotate(180deg);
 }

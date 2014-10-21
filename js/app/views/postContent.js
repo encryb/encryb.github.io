@@ -4,11 +4,12 @@ define([
     'backbone',
     'marionette',
     'jquery.swipebox',
+    'autolinker',
     'app/app',
     'utils/misc',
     'require-text!app/templates/postContent.html'
 
-], function($, _, Backbone, Marionette, Swipebox, App, MiscUtils, PostContentTemplate){
+], function($, _, Backbone, Marionette, Swipebox, Autolinker, App, MiscUtils, PostContentTemplate){
 
     var PostContentView = Marionette.ItemView.extend({
 
@@ -16,6 +17,12 @@ define([
         templateHelpers: {
             prettyTime: function() {
                 return MiscUtils.formatTime(this.created);
+            },
+            formatText: function() {
+              if (!this.hasOwnProperty('textData')) {
+                  return "";
+              }
+              return Autolinker.link(this.textData);
             },
             permissionsIcon: function() {
                 if (!this.permissions || this.permissions.length == 0) {

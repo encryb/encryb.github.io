@@ -12,13 +12,14 @@ define([
     'app/views/friend',
     'app/views/headerPanel',
     'app/views/invites',
+    'app/views/chats',
     'app/encryption',
     'app/services/appengine',
     'app/services/dropbox',
     'utils/data-convert'
     ],
 function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, FriendModel,
-          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView,
+          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView, ChatsView,
           Encryption, AppEngine, Dropbox, DataConvert) {
 
 
@@ -112,6 +113,24 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             });
             wall.invites.show(invitesView);
 
+
+
+            var chats = new Backbone.Collection();
+
+            wall.listenTo(App.vent, "friend:chat", function(friendModel) {
+                var chatLines = App.state.chats[friendModel.get("userId")]
+                var chat = new Backbone.Model({friend: friendModel});
+                chat.set("chatLines", chatLines);
+                chats.add(chat);
+            });
+
+            var chatsView = new ChatsView({
+                collection: chats
+            });
+            wall.chats.show(chatsView);
+
+
+
             var showHideInvites = function() {
                 if (App.state.myInvites.length == 0) {
                     wall.ui.invitePanel.addClass("hide");
@@ -131,6 +150,18 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                 wall.glowFriends();
             });
 
+            wall.listenTo(App.vent, "chat:submit", function(friend, text) {
+                FriendAdapter.sendChat(friend, text);
+            });
+            wall.listenTo(App.vent, "chat:received", function(friend) {
+                var friendChat = chats.findWhere({friend: friend});
+                if (!friendChat) {
+                    var chatLines = App.state.chats[friend.get("userId")]
+                    var chat = new Backbone.Model({friend: friend});
+                    chat.set("chatLines", chatLines);
+                    chats.add(chat);
+                }
+            });
 
             var showFriend = function(friendModel) {
                 require(["app/views/friendsDetails"], function (FriendsDetailsView) {

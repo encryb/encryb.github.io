@@ -58,6 +58,8 @@ define([
             this.listenTo(this.upvotes, "add", this.dispatchUpvoteAdd);
             this.listenTo(this.upvotes, "remove", this.dispatchUpvoteRemove);
 
+            this.chats = {};
+
             this.friendsOfFriends = [];
 
 
