@@ -11,12 +11,10 @@ define([
     'app/collections/persist/upvotes',
     'app/collections/persist/invites',
     'app/models/postWrapper',
-    'app/encryption',
-    'app/services/dropbox',
-    'app/remoteManifest'
+    'app/services/dropbox'
 ], function(Backbone, Marionette, _, Msgpack, FilteredCollection, App,
             PostColl, FriendColl,  CommentColl, UpvoteColl, InviteColl,
-            PostWrapper, Encryption, Dropbox, RemoteManifest) {
+            PostWrapper, Dropbox) {
 
     var State = Marionette.Object.extend({
 

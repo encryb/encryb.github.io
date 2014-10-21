@@ -3,11 +3,12 @@ define([
     'underscore',
     'backbone',
     'marionette',
+    'autolinker',
     'utils/misc',
     'app/app',
     'require-text!app/templates/chat.html',
     'require-text!app/templates/chatLine.html'
-], function($, _, Backbone, Marionette, MiscUtils, App, ChatTemplate, ChatLineTemplate) {
+], function($, _, Backbone, Marionette, Autolinker, MiscUtils, App, ChatTemplate, ChatLineTemplate) {
 
     var ChatLineView = Marionette.ItemView.extend({
         template: _.template(ChatLineTemplate),
@@ -25,11 +26,17 @@ define([
                     else {
                         return friend.escape("name");
                     }
-                }
+                },
+                formatText: function() {
+                    return Autolinker.link(_.escape(this.text));
+                },
             }
         },
         initialize: function(options) {
             this.friend = options.friend;
+        },
+        modelEvents: {
+            'change': 'render'
         }
     });
 
@@ -43,6 +50,7 @@ define([
             this.collection = this.model.get("chatLines");
             this.childViewOptions =  { friend: this.model.get("friend") };
             this.on("add:child", this.chatAdded);
+            this.on("childview:render", this.chatAdded);
         },
 
         templateHelpers: function() {

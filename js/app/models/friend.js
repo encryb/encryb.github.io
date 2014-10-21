@@ -1,8 +1,6 @@
 define([
-    'backbone',
-    'app/encryption',
-    'app/services/dropbox'
-], function (Backbone, Encryption, Storage) {
+    'backbone'
+], function (Backbone) {
 
 
     var Friend = Backbone.Model.extend({

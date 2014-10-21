@@ -93,8 +93,18 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
             var chat = new ChatCollection();
             chat.on("add", _.bind(function(model){
                 App.vent.trigger("chat:received", friend);
-                var chatLine = new Backbone.Model({time: model.get("time"), text: model.get("text")});
-                App.state.chats[friendId].add(chatLine);
+                var textBuffer = model.get("text").buffer;
+                var text = Encryption.decryptTextData(textBuffer, Encryption.getKeys().secretKey);
+                var collection = App.state.chats[friendId];
+                var lastChat = collection.last();
+                if (lastChat && !lastChat.get("isMine") &&
+                    (model.get("time") - lastChat.get("time") < 30000)) {
+                    lastChat.set("text", lastChat.get("text") + "\n" + text);
+                }
+                else {
+                    var chatLine = new Backbone.Model({time: model.get("time"), text: text});
+                    collection.add(chatLine);
+                }
                 this.confirmChat(friend, model.get("time"));
             },this));
             chat.fetch();
@@ -153,10 +163,21 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
         sendChat: function(friend, text) {
             var time = new Date().getTime();
             $.when(this._getOutgoingChatCollection(friend)).done(function(chats){
-                chats.create({time:time, text: text});
+                var encText = Encryption.encryptWithEcc(friend.get('publicKey'),  "plain/text", text);
+                var encArray = new Uint8Array(encText);
+                chats.create({time:time, text: encArray});
             });
             var chat = new Backbone.Model({isMine: true, time:time, text: text});
-            App.state.chats[friend.get("userId")].add(chat);
+
+            var collection = App.state.chats[friend.get("userId")];
+            var lastChat = collection.last();
+            if (lastChat && lastChat.get("isMine") &&
+                (time - lastChat.get("time") < 30000)) {
+                lastChat.set("text", lastChat.get("text") + "\n" + text);
+            }
+            else {
+                collection.add(chat);
+            }
         },
 
 
