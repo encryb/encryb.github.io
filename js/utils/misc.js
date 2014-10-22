@@ -26,7 +26,7 @@ define([
             fullTime += " " + d.toLocaleDateString();
         }
         return fullTime;
-    },
+    };
 
     // if scroll reaches top or bottom of target element, don't pass it to the parent
     // from http://stackoverflow.com/questions/5802467/prevent-scrolling-of-parent-element
@@ -53,6 +53,26 @@ define([
             return false;
         }
         return true;
+    };
+
+    exports.sendNotification = function(title, text, icon) {
+
+        if (Notification.permission === "granted") {
+            var notification = new Notification(title, {icon: icon, body: text});
+            notification.onclick = function(x) { window.focus(); notification.close(); };
+
+        }
+        else if (Notification.permission !== 'denied') {
+            Notification.requestPermission(function (permission) {
+                if (!('permission' in Notification)) {
+                    Notification.permission = permission;
+                }
+                if (permission === "granted") {
+                    var notification = new Notification(title, {icon: icon, body: text});
+                    notification.onclick = function(x) { window.focus(); notification.close(); };
+                }
+            });
+        }
     }
 
     return exports;

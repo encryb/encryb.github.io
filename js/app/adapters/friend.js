@@ -7,10 +7,10 @@ define([
     'app/encryption',
     'app/services/dropbox',
     'app/remoteManifest',
+    'utils/misc',
     'utils/random'
-
 ],
-function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteManifest, RandomUtil) {
+function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteManifest, MiscUtil, RandomUtil) {
 
     var FriendAdapter = {
 
@@ -104,6 +104,7 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
                 else {
                     var chatLine = new Backbone.Model({time: model.get("time"), text: text});
                     collection.add(chatLine);
+                    MiscUtil.sendNotification(friend.get("name"), _.escape(text), friend.get("pictureUrl"))
                 }
                 this.confirmChat(friend, model.get("time"));
             },this));

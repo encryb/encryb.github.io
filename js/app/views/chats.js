@@ -29,7 +29,7 @@ define([
                 },
                 formatText: function() {
                     return Autolinker.link(_.escape(this.text));
-                },
+                }
             }
         },
         initialize: function(options) {
