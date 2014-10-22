@@ -1,18 +1,11 @@
 <div class="rotate">
-<div class="panel panel-default" style="width:300px;">
+<div class="panel panel-chat" style="width:300px;">
     <div class="panel-heading pointer-hand clearfix" data-toggle="collapse" data-target="#collapse<%-uniqueId()%>">
 
             <span class="glyphicon glyphicon-comment"></span> <%= friend.escape("name") %>
 
-        <div class="btn-group pull-right">
-            <button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown">
-                <span class="glyphicon glyphicon-chevron-down"></span>
-            </button>
-            <ul class="dropdown-menu slidedown">
-            </ul>
-            <button id="chatClose" type="button"  class="btn btn-default btn-xs">
-                <span class="glyphicon glyphicon-remove"></span>
-            </button>
+        <div class="pull-right">
+            <span id="chatClose" class="panel-close">&times;</span>
         </div>
     </div>
     <div id="collapse<%-uniqueId()%>" class="panel-collapse collapse in">

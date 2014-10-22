@@ -107,12 +107,12 @@ define([
             }
         },
         clickPanel: function() {
-            this.ui.panel.removeClass("panel-primary").addClass("panel-default");
+            this.ui.panel.removeClass("panel-primary").addClass("panel-chat");
         },
 
         newChatHighlight: function() {
             if(!this.ui.textinput.is(":focus")) {
-                this.ui.panel.removeClass("panel-default").addClass("panel-primary");
+                this.ui.panel.removeClass("panel-chat").addClass("panel-primary");
             }
         },
 

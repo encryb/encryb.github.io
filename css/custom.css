@@ -309,3 +309,37 @@ ul.collection-list li {
 .rotate {
     transform:rotate(180deg);
 }
+
+.panel-chat {
+    border-color: #DDD;
+}
+.panel-chat > .panel-heading {
+    color: #FFF;
+    background-color: #000;
+    border-color: #000;
+}
+.panel-chat > .panel-heading + .panel-collapse .panel-body {
+    border-top-color: #DDD;
+}
+.panel-chat > .panel-footer + .panel-collapse .panel-body {
+    border-bottom-color: #DDD;
+}
+
+.panel-close {
+    float: right;
+    font-size: 21px;
+    font-weight: bold;
+    line-height: 1;
+    color: #FFFFFF;
+    text-shadow: 0 1px 0 #fff;
+    filter: alpha(opacity=60);
+    opacity: .6;
+}
+.panel-close:hover,
+.panel-close:focus {
+    color: #FFFFFF;
+    text-decoration: none;
+    cursor: pointer;
+    filter: alpha(opacity=90);
+    opacity: .9;
+}
