@@ -17,7 +17,7 @@ define([
             created: null,
             password: null,
             hasText: false,
-            hasImage: false,
+            hasImage: false
 
 
             // no defaults

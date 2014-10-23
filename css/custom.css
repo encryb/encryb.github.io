@@ -221,8 +221,8 @@ ul.collection-list li {
 
 .add-icon {
     padding: 5px;
-    font-size: 24px;
-    color: #AAA;
+    font-size: 20px;
+    color: #DDD;
 }
 
 .vcenter {
@@ -273,8 +273,16 @@ ul.collection-list li {
 }
 
 .friend {
-    padding: 10px 2px;
-    border-top: 2px solid #DDD;
+    padding: 5px 2px;
+    border-top: 1px solid #DDD;
+}
+
+.friend-icon {
+    max-width: 50px;
+    max-height: 50px;
+    margin-right: 3px;
+    border: 1px solid #DDDDDD;
+    border-radius: 3px;
 }
 
 .overlay {

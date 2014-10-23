@@ -118,6 +118,7 @@ define([
                 else {
                     wrapper.addFriendsUpvote(upvote.get("friend"));
                 }
+                this.updateScore(upvote, 1);
             }
         },
         onMyPostRemoved: function(post) {
@@ -164,6 +165,7 @@ define([
                 else {
                     wrapper.addFriendsUpvote(upvote.get("friend"));
                 }
+                this.updateScore(upvote, 1);
             }
         },
         removeFriendsPost: function(post, friend) {
@@ -262,6 +264,7 @@ define([
             else {
                 post.addFriendsUpvote(upvote.get("friend"));
             }
+            this.updateScore(upvote, 1);
         },
         dispatchUpvoteRemove: function(upvote) {
             var postId = upvote.get("postId");
@@ -276,6 +279,29 @@ define([
             else {
                 post.removeFriendsUpvote(upvote.get('userId'));
             }
+            this.updateScore(upvote, -1);
+        },
+        updateScore: function(upvote, value) {
+
+            var postId = upvote.get("postId");
+            var posterId = postId.split(":")[0];
+
+            if (posterId == this.myId) {
+                return;
+            }
+
+            var upvoterId = upvote.get("myUpvote") ? this.myId : upvote.get("friend").get("userId");
+            // don't count self upvotes
+            if (upvoterId == posterId) {
+                return;
+            }
+
+            var friend = this.myFriends.findWhere({userId: posterId});
+            if (!friend) {
+                console.log("Friend does not exist", friend);
+                return;
+            }
+            friend.set("score", friend.get("score") + value);
         },
 
 

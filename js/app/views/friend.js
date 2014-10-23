@@ -21,6 +21,14 @@ define([
             "click #chatButton": "openChat"
         },
 
+        modelEvents: {
+            "change": "render"
+        },
+
+        serializeData: function(){
+            return _.clone(this.model.attributes);
+        },
+
         imgClick: function() {
             App.vent.trigger("friend:selected", this.model);
         },

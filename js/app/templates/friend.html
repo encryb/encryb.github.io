@@ -1,13 +1,25 @@
 <div class="friend">
-    <div class="bottom-5">
-        <strong><%- name %></strong>
-    </div>
-    <div>
-        <img class="img-responsive img-thumbnail" style="max-height: 120px" id="friendImg" src="<%- pictureUrl %>">
+    <div  class="clearfix">
+        <div id="friendImg" class="pointer-hand cleafix" >
+            <div class="pull-left">
+                <img class="friend-icon" src="<%- pictureUrl %>">
+            </div>
+            <div class="pull-left">
+                <div>
+                    <strong><%- name %></strong>
+                </div>
+                <div>
+                    <code>+<%= score %></code>
+                </div>
+            </div>
+        </div>
+        <div class="pull-right">
+            <% if (invite == false) { %>
+                <span id="chatButton" class="glyphicon glyphicon-comment pointer-hand"></span>
+            <% } %>
+        </div>
     </div>
     <% if (invite == true) { %>
         <div class="alert-sm alert-warning">Invited</div>
-    <% } else { %>
-        <button id="chatButton" type="button" class="btn btn-sm btn-default%>">Chat</button>
     <% } %>
 </div>
