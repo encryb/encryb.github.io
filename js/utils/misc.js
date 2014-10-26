@@ -57,10 +57,11 @@ define([
 
     exports.sendNotification = function(title, text, icon) {
 
+        var deferred = $.Deferred();
         if (Notification.permission === "granted") {
             var notification = new Notification(title, {icon: icon, body: text});
             notification.onclick = function(x) { window.focus(); notification.close(); };
-
+            deferred.resolve(notification);
         }
         else if (Notification.permission !== 'denied') {
             Notification.requestPermission(function (permission) {
@@ -70,9 +71,15 @@ define([
                 if (permission === "granted") {
                     var notification = new Notification(title, {icon: icon, body: text});
                     notification.onclick = function(x) { window.focus(); notification.close(); };
+                    deferred.resolve(notification);
                 }
             });
         }
+        else {
+            deferred.fail();
+        }
+
+        return deferred.promise();
     }
 
     return exports;

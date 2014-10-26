@@ -118,10 +118,13 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             var chats = new Backbone.Collection();
 
             wall.listenTo(App.vent, "friend:chat", function(friendModel) {
-                var chatLines = App.state.chats[friendModel.get("userId")]
-                var chat = new Backbone.Model({friend: friendModel});
-                chat.set("chatLines", chatLines);
-                chats.add(chat);
+                var friendChat = chats.findWhere({friend: friendModel});
+                if (!friendChat) {
+                    var chatLines = App.state.chats[friendModel.get("userId")]
+                    var chat = new Backbone.Model({friend: friendModel});
+                    chat.set("chatLines", chatLines);
+                    chats.add(chat);
+                }
             });
 
             var chatsView = new ChatsView({
@@ -161,6 +164,9 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                     chat.set("chatLines", chatLines);
                     chats.add(chat);
                 }
+            });
+            wall.listenTo(App.vent, "chat:confirm", function(friend, time) {
+               FriendAdapter.sendReceiveConfirmation(friend, time);
             });
 
             var showFriend = function(friendModel) {

@@ -7,10 +7,9 @@ define([
     'app/encryption',
     'app/services/dropbox',
     'app/remoteManifest',
-    'utils/misc',
     'utils/random'
 ],
-function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteManifest, MiscUtil, RandomUtil) {
+function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteManifest, RandomUtil) {
 
     var FriendAdapter = {
 
@@ -90,33 +89,43 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
 
             App.state.chats[friendId] = new Backbone.Collection();
 
-            var chat = new ChatCollection();
-            chat.on("add", _.bind(function(model){
-                App.vent.trigger("chat:received", friend);
-                var textBuffer = model.get("text").buffer;
-                var text = Encryption.decryptTextData(textBuffer, Encryption.getKeys().secretKey);
-                var collection = App.state.chats[friendId];
-                var lastChat = collection.last();
-                if (lastChat && !lastChat.get("isMine") &&
-                    (model.get("time") - lastChat.get("time") < 30000)) {
-                    lastChat.set("text", lastChat.get("text") + "\n" + text);
-                }
-                else {
-                    var chatLine = new Backbone.Model({time: model.get("time"), text: text});
-                    collection.add(chatLine);
-                    MiscUtil.sendNotification(friend.get("name"), _.escape(text), friend.get("pictureUrl"))
-                }
-                this.confirmChat(friend, model.get("time"));
-            },this));
-            chat.fetch();
+            $.when(this._getModelUsedToNotifyFriend(friend)).done(_.bind(function(notifyModel) {
+
+                var chat = new ChatCollection();
+                chat.on("add", _.bind(function(chatLine){
+                    if (notifyModel.get("chatReceived") < chatLine.get("time")) {
+                        this._addChatLine(chatLine, friend);
+                    }
+                },this));
+                chat.fetch();
+            }, this));
 
         },
-        confirmChat: function(friend, timeOfReceivedChat) {
-            $.when(this._getModelUsedToNotifyFriend(friend).done(function(model){
-                model.set("chatReceived", timeOfReceivedChat);
-                model.save();
-            }));
+
+
+        sendReceiveConfirmation: function(friend, time) {
+            $.when(this._getModelUsedToNotifyFriend(friend)).done(function(notifyModel) {
+                notifyModel.set("chatReceived", time);
+                notifyModel.save();
+            });
         },
+
+        _addChatLine : function(chatLine, friend) {
+            App.vent.trigger("chat:received", friend);
+            var textBuffer = chatLine.get("text").buffer;
+            var text = Encryption.decryptTextData(textBuffer, Encryption.getKeys().secretKey);
+            var collection = App.state.chats[friend.get("userId")];
+            var lastChat = collection.last();
+            if (lastChat && !lastChat.get("isMine") &&
+                (chatLine.get("time") - lastChat.get("time") < 30000)) {
+                lastChat.set("text", lastChat.get("text") + "\n" + text);
+            }
+            else {
+                var newChat = new Backbone.Model({time: chatLine.get("time"), text: text});
+                collection.add(newChat);
+            }
+        },
+
         clearReceivedChats: function(friend, receivedTime) {
             $.when(this._getOutgoingChatCollection(friend)).done(function(chats) {
                 var chatLinesToDelete = [];

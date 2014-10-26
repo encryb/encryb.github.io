@@ -47,6 +47,7 @@ define([
         childViewContainer: ".chat",
 
         initialize: function() {
+            this.atBottom = true;
             this.collection = this.model.get("chatLines");
             this.childViewOptions =  { friend: this.model.get("friend") };
             this.on("add:child", this.chatAdded);
@@ -79,16 +80,26 @@ define([
             "add": "modelAdded"
         },
 
-        modelAdded: function() {
-            if (this.ui.panelBody.scrollTop() + this.ui.panelBody.outerHeight() >= this.ui.panelBody.prop("scrollHeight")) {
-                this.scrollDown = true;
+        modelAdded: function(chatLine) {
+            if(!chatLine.get("isMine")) {
+                if (!this.lastChatTime || chatLine.get("time") > this.lastChatTime ) {
+                    this.lastChatTime = chatLine.get("time");
+                }
+
+                if (!document.hasFocus()) {
+                    var friend = this.model.get("friend");
+                    if (this.notificationPromise) {
+                        $.when(this.notificationPromise).done(function (notification) {
+                            notification.close()
+                        });
+                    }
+                    this.notificationPromise = MiscUtils.sendNotification(friend.get("name"), chatLine.get("text"), friend.get("pictureUrl"));
+                }
             }
         },
-
         chatAdded : function() {
-            if (this.scrollDown) {
+            if (this.atBottom) {
                 this.ui.panelBody.scrollTop(this.ui.panelBody.prop("scrollHeight"));
-                this.scrollDown = false;
             }
             this.newChatHighlight();
         },
@@ -101,22 +112,39 @@ define([
                 App.vent.trigger("chat:submit", this.model.get("friend"), this.ui.textinput.val());
                 this.ui.textinput.val("");
 
-                this.scrollDown = true;
+                this.atBottom = true;
 
                 return false;
             }
         },
-        clickPanel: function() {
+        clickPanel: function(target) {
             this.ui.panel.removeClass("panel-primary").addClass("panel-chat");
+            if (this.notificationPromise) {
+                $.when(this.notificationPromise).done(function(notification) { notification.close()});
+            }
+            if (this.lastChatTime) {
+                App.vent.trigger("chat:confirm", this.model.get("friend"), this.lastChatTime);
+                delete this.lastChatTime;
+            }
         },
 
         newChatHighlight: function() {
             if(!this.ui.textinput.is(":focus")) {
                 this.ui.panel.removeClass("panel-chat").addClass("panel-primary");
             }
+            else if (this.lastChatTime) {
+                App.vent.trigger("chat:confirm", this.model.get("friend"), this.lastChatTime);
+                delete this.lastChatTime;
+            }
         },
 
         scrollCheck: function(e) {
+            if (this.ui.panelBody.scrollTop() + this.ui.panelBody.outerHeight() >= this.ui.panelBody.prop("scrollHeight")) {
+                this.atBottom = true;
+            }
+            else {
+                this.atBottom = false;
+            }
             return MiscUtils.isScrollOverflow(e);
         },
 
@@ -127,7 +155,7 @@ define([
 
     var ChatsView = Marionette.CollectionView.extend({
         childView: ChatView,
-        className: "overlay rotate clearfix margin-right-5"
+        className: "overlay rotate clearfix"
     });
     return ChatsView;
 });
