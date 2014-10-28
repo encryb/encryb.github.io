@@ -16,11 +16,12 @@ define([
     'app/encryption',
     'app/services/appengine',
     'app/services/dropbox',
+    'utils/collection-paged',
     'utils/data-convert'
     ],
 function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, FriendModel,
           WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView, ChatsView,
-          Encryption, AppEngine, Dropbox, DataConvert) {
+          Encryption, AppEngine, Dropbox, CollectionPaged, DataConvert) {
 
 
     function startDownload(uri, name) {
@@ -91,10 +92,24 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             var wall = new WallView();
             App.main.show(wall);
 
-            var postsView = new PostsView({
-                collection: App.state.filteredPosts
+            $.when(App.state.fetchAll()).done(function() {
+                var paged = new CollectionPaged(null, {limit: 3, collection: App.state.filteredPosts});
+
+                var postsView = new PostsView({
+                    collection: paged
+                });
+                wall.posts.show(postsView);
+
+                $(window).scroll(function() {
+                    var postsBottom = $('#posts').prop("scrollHeight") + $("#posts").offset().top;
+                    var pageBottom = $(window).scrollTop() + window.innerHeight;
+                    if ( postsBottom <= pageBottom + 10) {
+                        paged.increaseLimit(5);
+                    }
+                });
             });
-            wall.posts.show(postsView);
+
+
 
             var perms = new PermissionColl();
             perms.addFriends(App.state.myFriends);

@@ -72,6 +72,7 @@ define([
         events: {
             'mousewheel @ui.panelBody': 'scrollCheck',
             'click @ui.panel': 'clickPanel',
+            'focus @ui.textinput': 'clickPanel',
             'keydown @ui.textinput': 'submitChat',
             'click @ui.closeButton': 'closeChat'
         },

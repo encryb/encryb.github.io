@@ -2,14 +2,13 @@ define([
     'jquery',
     'backbone',
     'marionette',
-    'msgpack',
     'app/app',
     'app/encryption',
     'app/services/dropbox',
     'app/remoteManifest',
     'utils/random'
 ],
-function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteManifest, RandomUtil) {
+function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, RandomUtil) {
 
     var FriendAdapter = {
 
@@ -339,9 +338,7 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
             manifest['comments'] = App.state.myComments.toJSON();
             manifest['friends'] = App.state.myFriends.toManifest(friend);
 
-            var packedManifest = new Uint8Array(Msgpack.encode(manifest));
-
-            var encText = Encryption.encryptWithEcc(friend.get('publicKey'),  "plain/text", packedManifest, true);
+            var encText = Encryption.encryptWithEcc(friend.get('publicKey'),  "plain/text", JSON.stringify(manifest), false);
             Dropbox.uploadDropbox(friend.get('manifestFile'), encText).done(function(stats) {
                 deferred.resolve(stats);
                 FriendAdapter.notifyFriend(friend);
@@ -358,8 +355,8 @@ function ($, Backbone, Marionette, Msgpack, App, Encryption, Dropbox, RemoteMani
 
             Dropbox.downloadUrl(friendsManifest).done(function (data) {
 
-                var decryptedData = Encryption.decryptManifestData(data);
-                var manifest = Msgpack.decode(decryptedData.buffer);
+                var decryptedData = Encryption.decryptTextData(data, Encryption.getKeys().secretKey);
+                var manifest = JSON.parse(decryptedData);
 
                 friendAdapter.updateCollection(friend, manifest);
             });
