@@ -10,12 +10,6 @@ define([
     var HeaderPanelView = Marionette.ItemView.extend({
         template: _.template(HeaderPanelTemplate),
 
-        templateHelpers: {
-            dropboxId: function() {
-                return Dropbox.client.dropboxUid();
-            }
-        },
-
         initialize: function () {
             this.listenTo(this.model, 'change', this.render);
         }

@@ -52,7 +52,7 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             }
             var controller = this;
             $.when(App.getProfile()).done(function(profile){
-                if (profile.get('name').length == 0) {
+                if (profile.get('name').length == 0 || !profile.has('userId') ) {
                     controller._profile(profile);
                     return;
                 }
@@ -263,10 +263,6 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                 controller._processInvites();
             });
 
-            if (!profile.get('shared')) {
-                AppEngine.publishProfile();
-            }
-
         },
 
         _processAccepts: function() {
@@ -428,6 +424,9 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                         }
                     });
                 });
+                profileView.on("profile:create", function() {
+                    AppEngine.createProfile(profile, Dropbox.client.dropboxUid());
+                });
                 profileView.on('profile:updated', function(changes) {
                     var deferreds = [];
                     if ('name' in changes) {
@@ -462,7 +461,7 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                             controller._setupState(profile);
                             $.when(App.state.fetchAll()).done(function() {
                                 FriendAdapter.sendUpdatedProfile(profileChanges);
-                                AppEngine.publishProfile();
+                                AppEngine.publishProfile(App.state.myId, profile);
                                 profile.save();
                             });
                         }

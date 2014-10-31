@@ -26,7 +26,7 @@ function ($, Backbone, Marionette, App, Encryption) {
         invite: function(friendModel) {
             var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
-                AppEngine.invite({id: App.state.myId,
+                AppEngine.invite({id: App.getP,
                     inviteeId: friendModel.get("userId"),
                     datastoreId: friendModel.get("myDatastoreId")}
                 ).execute(function (resp) {
@@ -82,12 +82,12 @@ function ($, Backbone, Marionette, App, Encryption) {
             return deferred;
         },
 
-        getAccepts: function () {
+        getAccepts: function (myUserId) {
 
             var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
 
-                var args = {id: App.state.myId};
+                var args = {id: myUserId};
                 AppEngine.getAccepts(args).execute(function (resp) {
 
                     if (resp.error) {
@@ -103,7 +103,7 @@ function ($, Backbone, Marionette, App, Encryption) {
 
                     for (var i = 0; i < resp.items.length; i++) {
                         var acceptEntity = resp.items[i];
-                        AppEngine.acceptReceived({id: acceptEntity.userId, inviterId: App.state.myId}).execute(function (resp) {});
+                        AppEngine.acceptReceived({id: acceptEntity.userId, inviterId: myUserId}).execute(function (resp) {});
                     }
 
                 });
@@ -111,33 +111,44 @@ function ($, Backbone, Marionette, App, Encryption) {
             return deferred;
         },
 
-        publishProfile: function () {
+        createProfile: function(profile, userId) {
+            var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
-                $.when(App.getProfile()).done(function(profile){
 
-                    var publicKey = Encryption.getEncodedKeys().publicKey;
-
-                    // $TODO this logic needs to be improved
-                    if (profile.get('name').length < 1 || !publicKey) {
-                        return;
-                    }
-
-                    var args = {id: App.state.myId,
-                        name: profile.get('name'),
-                        intro: profile.get('intro'),
-                        pictureUrl: profile.get('pictureUrl'),
-                        publicKey: publicKey};
-                    console.log("Calling set profile", args);
-                    AppEngine.setProfile(args).execute(function (resp) {
-                        profile.set("shared", true);
-                        profile.save();
-                    });
-
+                var args = { userId: userId,
+                    name: profile.get('name'),
+                    intro: profile.get('intro'),
+                    pictureUrl: profile.get('pictureUrl'),
+                    publicKey: profile.get('publicKey')
+                };
+                console.log("Calling create profile", args);
+                AppEngine.createProfile(args).execute(function (resp) {
+                    // TODO: error checking please
+                    console.log("Profile created", resp);
+                    profile.set("userId", resp.userId);
+                    profile.set("password", resp.password);
+                    profile.save();
+                    deferred.resolve(profile);
                 });
-
-
             });
+            return deferred.promise();
+        },
 
+        publishProfile: function (myUserId, profile) {
+            require(["appengine!encrybuser"], function (AppEngine) {
+
+                var args = {id: App.state.myId,
+                    name: profile.get('name'),
+                    intro: profile.get('intro'),
+                    pictureUrl: profile.get('pictureUrl'),
+                    publicKey: profile.get('publicKey')
+                };
+                console.log("Calling set profile", args);
+                AppEngine.setProfile(args).execute(function (resp) {
+                    profile.set("shared", true);
+                    profile.save();
+                });
+            });
         }
     };
     return AppEngineService;

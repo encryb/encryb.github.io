@@ -19,13 +19,15 @@ define([
 
         initialize: function(options) {
 
-            this.myId = Dropbox.client.dropboxUid();
+
             this.myModel = new Backbone.Model();
 
             var profile = options.profile;
             this.myModel.set("name", profile.get("name"));
             this.myModel.set("pictureUrl", profile.get("pictureUrl"));
-            this.myModel.set("userId", this.myId);
+            this.myModel.set("userId", profile.get("userId"));
+
+            this.myId = profile.get("userId");
 
             this.listenTo(profile, "change:name", function(model){
                 this.myModel.set("name", model.get("name"));

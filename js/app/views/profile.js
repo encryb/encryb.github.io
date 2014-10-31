@@ -24,7 +24,9 @@ define([
         ui: {
             profilePicture: "#profilePicture",
             profilePictureExisting: "#profilePictureExisting",
-            updateButton: "#updateButton"
+            updateButton: "#updateButton",
+            createButton: "#createAccount",
+            loadingImage: ".loading-img"
         },
 
         events: {
@@ -33,7 +35,8 @@ define([
             "change.bs.fileinput @ui.profilePicture": "pictureChange",
             "click @ui.profilePicture #cancelButton": "pictureCancelButton",
             "click @ui.profilePicture #applyButton": "pictureApplyButton",
-            "click @ui.updateButton": "updateProfile"
+            "click @ui.updateButton": "updateProfile",
+            "click @ui.createButton": "createProfile"
         },
 
         triggers: {
@@ -44,6 +47,12 @@ define([
         updateProfile: function() {
             console.log(this.changes);
             this.trigger("profile:updated", this.changes);
+        },
+
+        createProfile: function() {
+            this.ui.createButton.addClass("hide");
+            this.ui.loadingImage.removeClass("hide");
+            this.trigger("profile:create");
         },
 
         nameChange: function(event){
