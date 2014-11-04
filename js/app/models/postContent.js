@@ -47,13 +47,21 @@ define([
                         updates['textData'] = Encryption.decryptTextData(encryptedText, password);
                     }
                     if(encryptedResizedImage != null) {
-                        updates['resizedImageData'] = Encryption.decryptImageData(encryptedResizedImage, password);
+                        var resizedImgDeferred = Encryption.decryptImageDataAsync(encryptedResizedImage, password);
                     }
                     if (encryptedFullImage != null) {
-                        updates['fullImageData'] = Encryption.decryptImageData(encryptedFullImage, password);
+                        var fullImgDeferred = Encryption.decryptImageDataAsync(encryptedFullImage, password);
                     }
-                    model.set(updates);
-                    deferred.resolve();
+                    $.when(resizedImgDeferred, fullImgDeferred).done(function(resizedImage, fullImage) {
+                        if (resizedImage) {
+                            updates['resizedImageData'] = resizedImage;
+                        }
+                        if (fullImage) {
+                            updates['fullImageData'] = fullImage;
+                        }
+                        model.set(updates);
+                        deferred.resolve();
+                    });
                 });
             return deferred;
         }

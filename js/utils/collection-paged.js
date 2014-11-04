@@ -6,6 +6,7 @@ define([
 
         initialize: function(models, options) {
             this._limit = options.limit;
+            this.comparator = options.comparator;
             this.setCollection(options.collection);
         },
         setCollection: function(collection) {
@@ -14,7 +15,6 @@ define([
             this._collection.on("remove", this.onRemove, this);
             this._collection.on("reset", this.onReset, this);
 
-            this.comparator = this._collection.comparator;
             this._process();
         },
         increaseLimit: function(increase) {

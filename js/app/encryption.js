@@ -1,8 +1,9 @@
 define([
     'sjcl',
+    'sjcl-worker/sjclWorkerInclude',
     'utils/data-convert',
     'utils/encoding'
-], function(Sjcl, DataConvert, Encoding){
+], function(Sjcl, SjclWorker, DataConvert, Encoding){
 
     var exports = {};
 
@@ -109,29 +110,28 @@ define([
     exports.decryptImageData = function(packedData, password) {
         var data = Encoding.decode(packedData);
         var ct = decrypt(data, password);
-        var decrypted = Sjcl.codec.bytes.fromBits(ct);
+        var decrypted = Sjcl.codec.arrayBuffer.fromBits(ct);
         var imageData = "data:" +  data.mimeType + ";base64," + DataConvert.arrayToBase64(decrypted);
         return imageData;
     }
+
+    exports.decryptImageDataAsync = function(packedData, password) {
+        var deferred = $.Deferred();
+
+        SjclWorker.sym.decrypt(password, packedData, function(error, decrypted) {
+            var imageData = "data:" +  decrypted.mimeType + ";base64,"+ DataConvert.arrayToBase64(decrypted.data);
+            deferred.resolve(imageData);
+        });
+
+        return deferred.promise();
+    }
+
 
     exports.decryptTextData = function(packedData, password) {
         var data = Encoding.decode(packedData);
         var ct = decrypt(data, password);
         var decrypted = Sjcl.codec.utf8String.fromBits(ct);
-        return decrypted;
-    }
 
-
-    exports.decryptManifestData = function(packedData) {
-        var data = Encoding.decode(packedData);
-        if (data.hasOwnProperty('kemtag')) {
-            var password = exports.getKeys().secretKey;
-        }
-        else {
-            var password = _OLD_KEY;
-        }
-        var ct = decrypt(data, password);
-        var decrypted = fromBitsToTypedArray(ct);
         return decrypted;
     }
 
@@ -159,7 +159,6 @@ define([
         result['iv'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.iv));
         result['ct'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.ct));
         return result;
-
     }
 
     function fromBitsToTypedArray(arr) {

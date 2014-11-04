@@ -43,12 +43,12 @@ define([
             this.myInvites = new InviteColl();
 
             this.posts = new Backbone.Collection();
-
-
-            this.filteredPosts = new FilteredCollection (null, {collection: this.posts});
-            this.filteredPosts.comparator = function(post) {
+            this.posts.comparator = function(post) {
                 return -post.get('post').get('created');
             };
+
+            this.filteredPosts = new FilteredCollection (null, {collection: this.posts});
+
 
             this.comments = new Backbone.Collection();
             this.listenTo(this.comments, "add", this.dispatchCommentAdd);

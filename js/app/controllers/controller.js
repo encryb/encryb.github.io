@@ -93,7 +93,8 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             App.main.show(wall);
 
             $.when(App.state.fetchAll()).done(function() {
-                var paged = new CollectionPaged(null, {limit: 3, collection: App.state.filteredPosts});
+                var paged = new CollectionPaged(null,
+                    {limit: 3, collection: App.state.filteredPosts, comparator: App.state.posts.comparator});
 
                 var postsView = new PostsView({
                     collection: paged

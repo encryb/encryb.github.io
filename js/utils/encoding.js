@@ -1,7 +1,7 @@
 define([
-    'underscore',
     'utils/data-convert'
-], function(_, DataConvert){
+], function(DataConvert){
+
 "use strict";
 
 var d = {};
@@ -14,7 +14,10 @@ var labelToIndex = {
                 // strings
                 mimeType: 201
 };
-var indexToLabel = _.invert(labelToIndex);
+var indexToLabel = {
+                0: "kemtag", 1: "salt", 2: "iv", 3: "ct",
+                201: "mimeType"};
+
 
 d.encode = function(dict) {
 
