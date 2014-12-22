@@ -10,7 +10,12 @@ define([
         this.name = name;
         this.datastoreId = options.datastoreId || 'default';
         this._syncCollection = null;
-        var databaseKey = Encryption.getKeys().databaseKey;
+        var keys = Encryption.getKeys();
+        // $BUG handle this better
+        if (keys === null) {
+            return;
+        }
+        var databaseKey = keys.databaseKey;
         // $BUG encryption function takes keys as bits, while decryption takes key as byte array
         this.encryptionKey = Sjcl.codec.bytes.toBits(databaseKey);
         this.decryptionKey = databaseKey;

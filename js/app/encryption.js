@@ -100,14 +100,8 @@ define([
         var publicKeyEncoded = localStorage.getItem("publicKey");
         var databaseKeyEncoded = localStorage.getItem("databaseKey");
 
-        if (secretKeyEncoded === null || publicKeyEncoded === null ) {
+        if (secretKeyEncoded === null || publicKeyEncoded === null || databaseKeyEncoded === null) {
             return null;
-        }
-        if (databaseKeyEncoded === null) {
-            var databaseKeyBits = Sjcl.random.randomWords(8,1);
-            var databaseKey = Sjcl.codec.bytes.fromBits(databaseKeyBits);
-            databaseKeyEncoded = JSON.stringify(databaseKey);
-            localStorage.setItem("databaseKey", databaseKeyEncoded);
         }
 
         return {
