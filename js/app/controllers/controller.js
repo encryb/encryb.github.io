@@ -3,9 +3,11 @@ define([
     'marionette',
     'app/app',
     'app/adapters/friend',
+    'app/adapters/post',
     'app/collections/gather/state',
     'app/collections/permissions',
     'app/models/friend',
+    'app/models/post',
     'app/views/wall',
     'app/views/createPost',
     'app/views/posts',
@@ -19,7 +21,7 @@ define([
     'utils/collection-paged',
     'utils/data-convert'
     ],
-function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, FriendModel,
+function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, PermissionColl, FriendModel, PostModel,
           WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView, ChatsView,
           Encryption, AppEngine, Dropbox, CollectionPaged, DataConvert) {
 
@@ -50,20 +52,18 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                 this.settings(true);
                 return;
             }
-            var controller = this;
             $.when(App.getProfile()).done(function(profile){
                 if (profile.get('name').length == 0 || !profile.has('userId') ) {
-                    controller._profile(profile);
+                    this._profile(profile);
                     return;
                 }
                 var publicKey = Encryption.getEncodedKeys().publicKey;
                 if (publicKey != profile.get("publicKey")) {
-                    controller._profile(profile);
+                    this._profile(profile);
                     return;
                 }
                 callback(profile);
-            });
-
+            }.bind(this));
         },
 
 
@@ -81,10 +81,19 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
         },
 
 
+        _openChatWindow: function(chats, friend) {
+            var friendChat = chats.findWhere({friend: friend});
+            if (!friendChat) {
+                var chatLines = App.state.chats[friend.get("userId")]
+                var chat = new Backbone.Model({friend: friend});
+                chat.set("chatLines", chatLines);
+                chats.add(chat);
+            }
+        },
+
         _showWall: function (profile) {
 
             this._setupState(profile);
-            App.state.fetchAll();
 
             var headerPanel = new HeaderPanelView({model: profile});
             App.headerPanel.show(headerPanel);
@@ -101,6 +110,7 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                 });
                 wall.posts.show(postsView);
 
+                // if user scrolls the bottom of the wall, add more posts to the wall
                 $(window).scroll(function() {
                     var postsBottom = $('#posts').prop("scrollHeight") + $("#posts").offset().top;
                     var pageBottom = $(window).scrollTop() + window.innerHeight;
@@ -109,7 +119,6 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                     }
                 });
             });
-
 
 
             var perms = new PermissionColl();
@@ -133,15 +142,10 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
 
             var chats = new Backbone.Collection();
 
+            // user clicked on chat icon in friends list
             wall.listenTo(App.vent, "friend:chat", function(friendModel) {
-                var friendChat = chats.findWhere({friend: friendModel});
-                if (!friendChat) {
-                    var chatLines = App.state.chats[friendModel.get("userId")]
-                    var chat = new Backbone.Model({friend: friendModel});
-                    chat.set("chatLines", chatLines);
-                    chats.add(chat);
-                }
-            });
+                this._openChatWindow(chats, friendModel);
+            }.bind(this));
 
             var chatsView = new ChatsView({
                 collection: chats
@@ -172,15 +176,10 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
             wall.listenTo(App.vent, "chat:submit", function(friend, text) {
                 FriendAdapter.sendChat(friend, text);
             });
-            wall.listenTo(App.vent, "chat:received", function(friend) {
-                var friendChat = chats.findWhere({friend: friend});
-                if (!friendChat) {
-                    var chatLines = App.state.chats[friend.get("userId")]
-                    var chat = new Backbone.Model({friend: friend});
-                    chat.set("chatLines", chatLines);
-                    chats.add(chat);
-                }
-            });
+            // Chat was received by friend adapter
+            wall.listenTo(App.vent, "chat:received", function(friendModel) {
+                this._openChatWindow(chats, friendModel);
+            }.bind(this));
             wall.listenTo(App.vent, "chat:confirm", function(friend, time) {
                FriendAdapter.sendReceiveConfirmation(friend, time);
             });
@@ -227,7 +226,6 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                 });
             });
 
-            var controller = this;
             wall.listenTo(App.vent, "invite:send", function(inviteModel) {
                 $.when(FriendAdapter.createFriend(inviteModel)).done(function(friendModel) {
                     AppEngine.invite(friendModel);
@@ -251,18 +249,67 @@ function (Backbone, Marionette, App, FriendAdapter, State, PermissionColl, Frien
                FriendAdapter.deleteFriend(friendModel);
             });
 
-            wall.listenTo(App.vent, "post:created", FriendAdapter.saveManifests);
-            wall.listenTo(App.vent, "post:deleted", FriendAdapter.saveManifests);
-            wall.listenTo(App.vent, "post:liked", FriendAdapter.saveManifests);
-            wall.listenTo(App.vent, "comment:created", FriendAdapter.saveManifests);
-            wall.listenTo(App.vent, "comment:deleted", FriendAdapter.saveManifests);
+            wall.listenTo(App.vent, "post:created", function(postMeta, contentList, uiNotifyDeferred) {
+                var postModel = new PostModel(postMeta);
+                var contentCollection = new Backbone.Collection();
+                for (var i=0; i<contentList.length; i++) {
+                    var content = contentList[i];
+                    var contentModel = new Backbone.Model(content);
+                    contentCollection.add(contentModel);
+                }
+                postModel.set("content", contentCollection);
 
+                var upload = PostAdapter.uploadPost(postModel);
+                $.when(upload).done(function() {
 
+                    App.state.myPosts.add(postModel);
+                    uiNotifyDeferred.resolve();
+
+                    // made sure we get get Id for this post before we save
+                    $.when(postModel.save()).done(function() {
+                        FriendAdapter.saveManifests();
+                    });
+                });
+            });
+
+            wall.listenTo(App.vent, "post:deleted", function(post) {
+                PostAdapter.deletePost(post);
+                post.deletePost();
+                FriendAdapter.saveManifests();
+            });
+            wall.listenTo(App.vent, "post:liked", function(postId) {
+                App.state.myUpvotes.toggleUpvote(postId);
+                FriendAdapter.saveManifests();
+            });
+            wall.listenTo(App.vent, "comment:created", function(postId, comment) {
+                App.state.myComments.addComment(postId, comment['text'], comment['date']);
+                FriendAdapter.saveManifests();
+            });
+            wall.listenTo(App.vent, "comment:deleted", function(commentId) {
+                var comment = App.state.myComments.findWhere({id: commentId});
+                if (comment) {
+                    comment.destroy();
+                    FriendAdapter.saveManifests();
+                }
+            });
+            wall.listenTo(App.vent, "file:download", function(content, password){
+
+                if (content.has("data")) {
+                    startDownload(content.get("data"), content.get("filename"));
+                    return;
+                }
+                Dropbox.downloadUrl(content.get('dataUrl'))
+                    .then(Encryption.decryptImageDataAsync.bind(null, password))
+                    .done(function(data) {
+                        content.set("data", data);
+                        startDownload(data, content.get("filename"));
+                    });
+            });
 
             $.when(App.state.fetchAll()).done(function(){
-                controller._processAccepts();
-                controller._processInvites();
-            });
+                this._processAccepts();
+                this._processInvites();
+            }.bind(this));
 
         },
 

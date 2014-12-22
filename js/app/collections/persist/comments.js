@@ -1,13 +1,13 @@
 define([
   'backbone',
-  'app/services/dropbox'
-], function(Backbone, Dropbox){
+  'app/collections/encryptedDatastore'
+], function(Backbone, EncryptedDatastore){
 
 var Comments = Backbone.Collection.extend({
 
     model: Backbone.Model,
 
-    dropboxDatastore: new Backbone.DropboxDatastore('Comments_2'),
+    dropboxDatastore: new EncryptedDatastore('Comments_2'),
 
     initialize: function () {
         this.dropboxDatastore.syncCollection(this);

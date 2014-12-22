@@ -42,26 +42,27 @@ define(["sjcl-worker/generalWorkerInclude"], function (WorkerManager) {
 
 	var sjclWorker = {
 		sym: {
-			encrypt: function (key, message, callback) {
+			encrypt: function (content, mimeType, password, callback) {
 				workers.getFreeWorker(function (err, worker) {
-					var data = {
-						"key": key,
-						"message": message,
+					var message = {
+						"password": password,
+						"mimeType": mimeType,
+						"content": content,
 						"encrypt": true
 					};
 
-					worker.postMessage(data, null, callback);
+					worker.postMessage(message, [message.content], callback);
 				});
 			},
-			decrypt: function (key, message, callback) {
+			decrypt: function (encryptedContent, password, callback) {
 				workers.getFreeWorker(function (err, worker) {
-					var data = {
-						"key": key,
-						"message": message,
+					var message = {
+						"password": password,
+						"encryptedContent": encryptedContent,
 						"decrypt": true
 					};
 
-					worker.postMessage(data, null, callback);
+					worker.postMessage(message, [encryptedContent], callback);
 				});
 			}
 		}

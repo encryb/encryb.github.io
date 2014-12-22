@@ -53,9 +53,6 @@ require.config({
 		bootstrap: {
             deps: ["jquery"]
         },
-        'jasny-bootstrap': {
-        	deps: ['jquery', "bootstrap"]
-        },
         'backbone-forms-bootstrap3' : {
             deps: ["backbone-forms"],
             exports: 'Backbone.Form'

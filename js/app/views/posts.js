@@ -4,12 +4,13 @@ define([
     'backbone',
     'marionette',
     'app/app',
+    'app/adapters/post',
     'app/views/comments',
     'app/views/postContent',
     'app/views/upvotes',
     'require-text!app/templates/post.html'
 
-], function($, _, Backbone, Marionette, App, CommentsView, PostContentView, UpvotesView, PostTemplate) {
+], function($, _, Backbone, Marionette, App, PostAdapter, CommentsView, PostContentView, UpvotesView, PostTemplate) {
     var PostView = Marionette.LayoutView.extend({
         template: _.template(PostTemplate),
         regions: {
@@ -21,8 +22,13 @@ define([
             this.setupChildren();
         },
         setupChildren: function () {
-            var postContentView = new PostContentView({model: this.model.get('post')});
-            this.content.show(postContentView);
+
+            var postModel = this.model.get("post");
+            //check what happens if this view gets destroyed before fetchPost completes
+            $.when(PostAdapter.fetchPost(postModel, false)).done(function() {
+                var postContentView = new PostContentView({model: postModel});
+                this.content.show(postContentView);
+            }.bind(this));
 
             var upvotesModel = this.model.get("upvotes");
             var upvotesView = new UpvotesView({model: upvotesModel, collection: upvotesModel.get("friendUpvotes")});
@@ -38,7 +44,7 @@ define([
                 postView.submitComment(attr);
             });
             commentsView.on("childview:comment:delete", function(comment) {
-                postView.trigger("comment:delete", comment.model.get("id"));
+                postView.deleteComment(comment.model.get("id"));
             });
         },
         events: {
@@ -47,52 +53,23 @@ define([
 
         },
         toggleUpvote: function() {
-            var id = this.model.get("postId");
-            this.trigger("post:like", id);
+            App.vent.trigger("post:liked", this.model.get("postId"));
         },
         submitComment: function(attr) {
-            var id = this.model.get("postId");
-            attr['postId'] = id;
-            this.trigger("comment:submit", attr);
-        },
+            App.vent.trigger("comment:created", this.model.get("postId"), attr );
 
+        },
+        deleteComment: function(commentId) {
+            App.vent.trigger("comment:deleted", commentId);
+        },
         deletePost: function() {
-            // check the order here
-            this.trigger("post:delete");
-            this.model.deletePost();
+            App.vent.trigger("post:deleted", this.model);
         }
 
     });
 
     var PostsView = Marionette.CollectionView.extend({
-        childView: PostView,
-        initialize: function() {
-            this.on("childview:post:delete", function(post){
-                setTimeout(function(){
-                    App.vent.trigger("post:deleted")
-                }, 100);
-            });
-
-            this.on("childview:post:like", function(postView, id){
-                App.state.myUpvotes.toggleUpvote(id);
-                App.vent.trigger("post:liked");
-            });
-
-            this.on("childview:comment:submit", function(postView, comment) {
-                App.state.myComments.addComment(comment['postId'], comment['text'], comment['date']);
-                App.vent.trigger("comment:created");
-            });
-
-            this.on("childview:comment:delete", function(postView, commentId) {
-                var comment = App.state.myComments.findWhere({id:commentId});
-                if (comment) {
-                    comment.destroy();
-                    setTimeout(function(){
-                        App.vent.trigger("comment:deleted");
-                    }, 100);
-                }
-            });
-        }
+        childView: PostView
     });
     return PostsView;
 });

@@ -63,7 +63,35 @@ define(function() {
         var canvasContext = canvas.getContext("2d");
 
         canvasContext.drawImage(image, 0, 0, canvas.width, canvas.height);
-        return canvas.toDataURL("image/jpeg");
+        var fullsize =  canvas.toDataURL("image/jpeg");
+
+        var thumbscale = maxWidth < maxHeight ? 4 : 6;
+
+        maxWidth = maxWidth / thumbscale;
+        maxHeight = maxHeight / thumbscale;
+        if (width > height) {
+            if (width > maxWidth) {
+                height *= maxWidth / width;
+                width = maxWidth;
+            }
+        }
+        else {
+            if (height > maxHeight) {
+                width *= maxHeight / height;
+                height = maxHeight;
+            }
+        }
+
+
+        canvas.width = width;
+        canvas.height = height;
+        var canvasContext2 = canvas.getContext("2d");
+
+        canvasContext2.drawImage(image, 0, 0, canvas.width, canvas.height);
+        var thumbnail = canvas.toDataURL("image/jpeg");
+
+        return {thumbnail: thumbnail, fullsize: fullsize};
+
     };
 
     return exports;

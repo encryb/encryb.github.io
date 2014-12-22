@@ -1,9 +1,6 @@
 define([
-    'backbone',
-    'app/app',
-    'app/models/postContent',
-    'app/services/dropbox'
-], function (Backbone, App, PostContent, Dropbox) {
+    'backbone'
+], function (Backbone) {
 
     var PostWrapper = Backbone.Model.extend({
 
@@ -17,7 +14,7 @@ define([
 
             var commentsColl = new Backbone.Collection();
             commentsColl.comparator = function(comment) {
-                return comment.get("date"); // Note the minus!
+                return comment.get("date");
             };
             this.set("comments", commentsColl);
 
@@ -67,7 +64,7 @@ define([
             this.postModel = postModel;
 
             var attr = _.extend(_.clone(postModel.attributes), {poster: myInfo, myPost: true});
-            var model = new PostContent(attr);
+            var model = new Backbone.Model(attr);
             this.set("post", model);
             var userId = myInfo.get("userId");
             this.setPostId(userId, postModel.get("id"));
@@ -76,7 +73,7 @@ define([
 
         setFriendsPost: function(post, friend) {
             var attr = _.extend(post, {poster: friend, myPost: false});
-            var model = new PostContent(attr);
+            var model = new Backbone.Model(attr);
             this.set("post", model);
             this.setPostId(friend.get("userId"), post.id);
             this.set('userId', friend.get("userId"));

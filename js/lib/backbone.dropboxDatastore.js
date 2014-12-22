@@ -44,7 +44,7 @@
 
       return this.getTable()
         .then(createRecord)
-        .then(Backbone.DropboxDatastore.recordToJson);
+        .then(_.bind(this.recordToJson, this));
     },
 
     // Update existing record in *Dropbox.Datastore.Table*.
@@ -53,7 +53,7 @@
 
       return this.getTable()
         .then(updateRecord)
-        .then(Backbone.DropboxDatastore.recordToJson);
+        .then(_.bind(this.recordToJson, this));
     },
 
     // Find record from *Dropbox.Datastore.Table* by id.
@@ -64,7 +64,7 @@
       return this.getTable()
         .then(findRecord)
         .then(throwIfNotFound)
-        .then(Backbone.DropboxDatastore.recordToJson);
+        .then(_.bind(this.recordToJson, this));
     },
 
     // Find all records currently in *Dropbox.Datastore.Table*.
@@ -119,16 +119,16 @@
     },
 
     _createWithTable: function(model, table) {
-      return table.insert(model.toJSON());
+      return table.insert(this.modelToJson(model));
     },
 
     _updateWithTable: function(model, table) {
       var record = this._findWithTable(model, table);
 
       if (record) {
-        record.update(model.toJSON());
+        record.update(this.modelToJson(model));
       } else {
-        record = table.insert(model.toJSON());
+        record = table.insert(this.modelToJson(model));
       }
 
       return record;
@@ -152,7 +152,7 @@
     },
 
     _findAllWithTable: function(table) {
-      var result = _.map(table.query(), Backbone.DropboxDatastore.recordToJson);
+      var result = _.map(table.query(), _.bind(this.recordToJson, this));
       return result;
     },
 
@@ -203,12 +203,23 @@
     _onChangeRecords: function(changes) {
       var changedRecords;
       if (this._syncCollection) {
-        changedRecords = Backbone.DropboxDatastore.getChangesForTable(this.name, changes);
+        changedRecords = Backbone.DropboxDatastore.getChangesForTable(this.name, changes,
+            _.bind(this.recordToJson, this));
 
         // Update collection deferred to prevent double copy of same model in local collection
         _.defer(Backbone.DropboxDatastore.updateCollectionWithChanges, this._syncCollection, changedRecords);
       }
+    },
+
+    recordToJson: function(record) {
+      return Backbone.DropboxDatastore.recordToJson(record);
+    },
+
+    modelToJson: function(model) {
+      return model.toJSON();
     }
+
+
   });
 
   // Static methods of DropboxDatastore
@@ -307,7 +318,7 @@
       });
     },
 
-    getChangesForTable: function(tableName, changes) {
+    getChangesForTable: function(tableName, changes, convertRecord) {
       var records = {
         toRemove: [],
         toAdd: []
@@ -317,7 +328,7 @@
         if (changedRecord.isDeleted()) {
           records.toRemove.push(changedRecord.getId());
         } else {
-          records.toAdd.push(Backbone.DropboxDatastore.recordToJson(changedRecord));
+          records.toAdd.push(convertRecord(changedRecord));
         }
       });
 

@@ -1,9 +1,11 @@
 define([
   'jquery',
+  'underscore',
   'dropbox',
   'backbone.dropboxDatastore',
-  'app/constants'
-], function($, Dropbox, DropboxDatastore, Constants){
+  'app/constants',
+  'app/encryption'
+], function($, _, Dropbox, DropboxDatastore, Constants, Encryption){
 
 var exports = {};
 
@@ -15,9 +17,13 @@ Backbone.Dropbox = Dropbox;
 
 exports.client = dropboxClient;
 
+//$CONFIG
+
+var TAG_TYPE_TEXT = "text";
 var TAG_TYPE_RESIZED = "resized";
 var TAG_TYPE_FULLSIZE = "fullsize";
-var TAG_TYPE_TEXT = "text";
+var TAG_TYPE_CAPTION= "caption";
+var TAG_TYPE_DATA = "data";
 var TAG_SPLIT = "/";
 
 exports.createFolder = function(path) {
@@ -31,7 +37,7 @@ exports.createFolder = function(path) {
         }
     });
     return deferred;
-}
+};
 
 exports.remove = function(path) {
     var deferred = $.Deferred();
@@ -44,7 +50,7 @@ exports.remove = function(path) {
         }
     });
     return deferred;
-}
+};
 
 exports.exists = function(path) {
     var deferred = $.Deferred();
@@ -56,7 +62,8 @@ exports.exists = function(path) {
         }
     });
     return deferred;
-}
+};
+
 exports.downloadDropbox = function(path) {
     var deferred = $.Deferred();
     dropboxClient.readFile(path, {arrayBuffer:true}, function (error, data, stats) {
@@ -68,7 +75,7 @@ exports.downloadDropbox = function(path) {
         }
     });
     return deferred;
-}
+};
 
 exports.uploadDropbox = function(path, data) {
     var deferred = $.Deferred();
@@ -81,7 +88,7 @@ exports.uploadDropbox = function(path, data) {
         }
     });
     return deferred;
-}
+};
 
 exports.shareDropbox = function(stats) {
     var deferred = $.Deferred();
@@ -94,62 +101,26 @@ exports.shareDropbox = function(stats) {
         }
     });
     return deferred;
-}
-
-exports.getFullImagePath = function(id) {
-    return id + TAG_SPLIT + TAG_TYPE_FULLSIZE;
-}
-
-exports.getResizedImagePath = function(id) {
-    return id + TAG_SPLIT + TAG_TYPE_RESIZED;
-}
+};
 
 exports.getTextPath = function(id) {
     return id + TAG_SPLIT + TAG_TYPE_TEXT;
-}
+};
 
-exports.uploadPost = function (id, textData, resizedImageData, imageData) {
-    var deferred = $.Deferred();
+exports.getImagePath = function(id, contentNumber) {
+    return id + TAG_SPLIT + TAG_TYPE_FULLSIZE + contentNumber;
+};
+exports.getThumbnailPath = function(id, contentNumber) {
+    return id + TAG_SPLIT + TAG_TYPE_RESIZED + contentNumber;
+};
 
-    var createFolder = exports.createFolder(id);
+exports.getCaptionPath = function(id, contentNumber) {
+    return id + TAG_SPLIT + TAG_TYPE_CAPTION + contentNumber;
+};
 
-    var deferredText = null;
-    var deferredFullImage = null;
-    var deferredResizedImage = null;
-
-    if (textData) {
-        deferredText = exports.uploadDropbox(exports.getTextPath(id), textData).then(exports.shareDropbox);
-    }
-    if (resizedImageData) {
-        deferredResizedImage = exports.uploadDropbox(exports.getResizedImagePath(id), resizedImageData).then(exports.shareDropbox);
-    }
-    if (imageData) {
-        deferredFullImage = exports.uploadDropbox(exports.getFullImagePath(id), imageData).then(exports.shareDropbox);
-    }
-
-
-    $.when(createFolder).done(function() {
-        var update = {};
-
-        $.when(deferredText, deferredResizedImage, deferredFullImage).done(function(textUrl, resizedImageUrl, imageUrl){
-
-            if (textUrl != null) {
-                update['textUrl'] = textUrl;
-            }
-            if (resizedImageUrl != null) {
-                update['resizedImageUrl'] = resizedImageUrl;
-            }
-            if (imageUrl != null) {
-                update['fullImageUrl'] = imageUrl;
-            }
-
-            deferred.resolve(update);
-        });
-    });
-
-    return deferred;
-}
-
+exports.getDataPath = function(id, contentNumber) {
+    return id + TAG_SPLIT + TAG_TYPE_DATA + contentNumber;
+};
 
 exports.downloadUrl = function(downloadUrl) {
 
@@ -159,8 +130,8 @@ exports.downloadUrl = function(downloadUrl) {
     xhr.open('GET', downloadUrl);
     xhr.responseType = 'arraybuffer';
     xhr.onload = function() {
-        var ecnryptedData = xhr.response;
-        deferred.resolve(ecnryptedData);
+        var encryptedData = xhr.response;
+        deferred.resolve(encryptedData);
     };
     xhr.onerror = function() {
         deferred.fail();
@@ -168,7 +139,7 @@ exports.downloadUrl = function(downloadUrl) {
     xhr.send();
 
     return deferred;
-}
+};
 
 return exports;
 

@@ -72,6 +72,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
                 });
             });
         },
+
         setupIncomingChatCollection: function(friend){
             var friendId = friend.get("userId");
 
@@ -110,11 +111,13 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
         },
 
         _addChatLine : function(chatLine, friend) {
+            //send trigger to controller to open a chat window if need be
             App.vent.trigger("chat:received", friend);
             var textBuffer = chatLine.get("text").buffer;
             var text = Encryption.decryptTextData(textBuffer, Encryption.getKeys().secretKey);
             var collection = App.state.chats[friend.get("userId")];
             var lastChat = collection.last();
+
             if (lastChat && !lastChat.get("isMine") &&
                 (chatLine.get("time") - lastChat.get("time") < 30000)) {
                 lastChat.set("text", lastChat.get("text") + "\n" + text);
@@ -324,8 +327,8 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
 
         saveManifests: function() {
             App.state.myFriends.each(function(friend) {
-                this.saveManifest(friend);
-            }, FriendAdapter);
+                setTimeout(function() { FriendAdapter.saveManifest(friend); }, 0); ;
+            });
         },
 
         saveManifest: function(friend) {

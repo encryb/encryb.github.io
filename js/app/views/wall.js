@@ -2,13 +2,11 @@ define([
     'jquery',
     'underscore',
     'backbone',
-    'jcrop',
-    'jasny-bootstrap',
     'marionette',
     'visibility',
     'app/app',
     'require-text!app/templates/wall.html'
-], function($, _, Backbone, Jcrop, Jasny, Marionette, Visibility, App,
+], function($, _, Backbone, Marionette, Visibility, App,
             WallTemplate
     ){
 

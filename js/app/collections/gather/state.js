@@ -18,8 +18,6 @@ define([
     var State = Marionette.Object.extend({
 
         initialize: function(options) {
-
-
             this.myModel = new Backbone.Model();
 
             var profile = options.profile;
@@ -103,6 +101,16 @@ define([
         },
 
         onMyPostAdded: function(post) {
+            // if post was just created, it might not have id (assigned by the datastore)
+            // in that case, save the post first.
+            if (post.has("id")){
+                return this._onMyPostAdded(post);
+            }
+            $.when(post.save()).done(function(){
+                this._onMyPostAdded(post);
+            }.bind(this));
+        },
+        _onMyPostAdded: function(post) {
             var wrapper = new PostWrapper();
             wrapper.setMyPost(post, this.myModel);
             this.posts.add(wrapper);
@@ -126,7 +134,7 @@ define([
         onMyPostRemoved: function(post) {
             var postId = this.myId + ":" + post.get("id");
             var model = this.posts.findWhere({postId: postId});
-            model.destroy();
+            this.posts.remove(model);
         },
         onMyCommentAdded: function(comment) {
 

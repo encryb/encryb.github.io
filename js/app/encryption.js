@@ -2,27 +2,45 @@ define([
     'sjcl',
     'sjcl-worker/sjclWorkerInclude',
     'utils/data-convert',
-    'utils/encoding'
-], function(Sjcl, SjclWorker, DataConvert, Encoding){
+    'utils/encoding',
+    'utils/sjcl-convert'
+], function(Sjcl, SjclWorker, DataConvert, Encoding, SjclConvert){
 
     var exports = {};
 
     var _OLD_KEY = "global";
 
 
+
+    /** Encrypt a binary array or a string.
+     * @param {String|bitArray} key The password or key.
+     * @param {String} mimeType Mime Type of data or null.
+     * @param {String|Array} [data] Data to encrypt.
+     * @param {Boolean} [isBinary] If data is string or a binary array.
+     * @return {ArrayBuffer} ArrayBuffer of encrypted data.
+     */
     exports.encrypt = function(key, mimeType, data, isBinary) {
         if (isBinary) {
             data = Sjcl.codec.bytes.toBits(data);
         }
         var encrypted = Sjcl.json._encrypt(key, data);
 
-        var encryptedData = convertFromBits(encrypted);
-        encryptedData['mimeType'] = mimeType;
-
+        var encryptedData = SjclConvert.convertFromBits(encrypted);
+        if (mimeType) {
+            encryptedData['mimeType'] = mimeType;
+        }
         var buf = Encoding.encode(encryptedData);
 
         return buf;
     };
+
+    exports.encryptAsync = function(key, mimeType, data) {
+        var deferred = $.Deferred();
+        SjclWorker.sym.encrypt(data, mimeType, key, function(error, encrypted) {
+            deferred.resolve(encrypted.packedData);
+        });
+        return deferred.promise();
+    },
 
     exports.encryptWithEcc = function(keyString, mimeType, data, isBinary) {
         if(keyString) {
@@ -42,19 +60,24 @@ define([
 
         var publicKeyEncoded = Sjcl.codec.hex.fromBits(publicKey.x) + Sjcl.codec.hex.fromBits(publicKey.y);
         var secretKeyEncoded = Sjcl.codec.hex.fromBits(secretKey);
-        exports.saveKeys(secretKeyEncoded, publicKeyEncoded);
+
+        var databaseKey = Sjcl.random.randomWords(8,1);
+        var databaseKeyEncoded = JSON.stringify(databaseKey);
+
+        exports.saveKeys(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded);
     }
 
-    exports.saveKeys = function(secretKeyEncoded, publicKeyEncoded) {
+    exports.saveKeys = function(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded) {
         localStorage.setItem("secretKey", secretKeyEncoded);
         localStorage.setItem("publicKey", publicKeyEncoded);
-
+        localStorage.setItem("databaseKey", databaseKeyEncoded);
     }
 
 
     exports.removeKeys = function() {
         localStorage.removeItem("secretKey");
         localStorage.removeItem("publicKey");
+        localStorage.removeItem("databaseKey");
     };
 
     exports.publicHexToKey = function(publicKeyEncoded) {
@@ -75,30 +98,41 @@ define([
     exports.getKeys = function() {
         var secretKeyEncoded = localStorage.getItem("secretKey");
         var publicKeyEncoded = localStorage.getItem("publicKey");
+        var databaseKeyEncoded = localStorage.getItem("databaseKey");
 
         if (secretKeyEncoded === null || publicKeyEncoded === null ) {
             return null;
         }
+        if (databaseKeyEncoded === null) {
+            var databaseKeyBits = Sjcl.random.randomWords(8,1);
+            var databaseKey = Sjcl.codec.bytes.fromBits(databaseKeyBits);
+            databaseKeyEncoded = JSON.stringify(databaseKey);
+            localStorage.setItem("databaseKey", databaseKeyEncoded);
+        }
 
         return {
             publicKey: exports.publicHexToKey(publicKeyEncoded),
-            secretKey: exports.secretHexToKey(secretKeyEncoded)
+            secretKey: exports.secretHexToKey(secretKeyEncoded),
+            databaseKey: JSON.parse(databaseKeyEncoded)
         };
     };
 
     exports.getEncodedKeys = function() {
         var secretKeyEncoded = localStorage.getItem("secretKey");
         var publicKeyEncoded = localStorage.getItem("publicKey");
+        var databaseKeyEncoded = localStorage.getItem("databaseKey");
+
         return {
             publicKey: publicKeyEncoded,
-            secretKey: secretKeyEncoded
+            secretKey: secretKeyEncoded,
+            databaseKey: databaseKeyEncoded
         };
 
     };
 
     function decrypt(data, password) {
 
-        var encData = convertToBits(data);
+        var encData = SjclConvert.convertToBits(data);
         if (password instanceof Array) {
             password = Sjcl.codec.bytes.toBits(password);
         }
@@ -115,17 +149,16 @@ define([
         return imageData;
     }
 
-    exports.decryptImageDataAsync = function(packedData, password) {
+    exports.decryptImageDataAsync = function(password, packedData) {
         var deferred = $.Deferred();
 
-        SjclWorker.sym.decrypt(password, packedData, function(error, decrypted) {
+        SjclWorker.sym.decrypt(packedData, password, function(error, decrypted) {
             var imageData = "data:" +  decrypted.mimeType + ";base64,"+ DataConvert.arrayToBase64(decrypted.data);
             deferred.resolve(imageData);
         });
 
         return deferred.promise();
     }
-
 
     exports.decryptTextData = function(packedData, password) {
         var data = Encoding.decode(packedData);
@@ -135,43 +168,12 @@ define([
         return decrypted;
     }
 
-    function convertFromBits(obj) {
-        var result = {};
-        if (obj.kemtag) {
-            result['kemtag'] = fromBitsToTypedArray(obj.kemtag);
-        }
-        if (obj.salt) {
-            result['salt'] = fromBitsToTypedArray(obj.salt);
-        }
-        result['iv'] = fromBitsToTypedArray(obj.iv);
-        result['ct'] = fromBitsToTypedArray(obj.ct);
-        return result;
-    }
-
-    function convertToBits(obj) {
-        var result = {};
-        if (obj.kemtag) {
-            result['kemtag'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.kemtag));
-        }
-        if (obj.salt) {
-            result['salt'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.salt));
-        }
-        result['iv'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.iv));
-        result['ct'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.ct));
-        return result;
-    }
-
-    function fromBitsToTypedArray(arr) {
-        var bl = Sjcl.bitArray.bitLength(arr), i, tmp;
-        var out = new Uint8Array(bl/8);
-        for (i=0; i<bl/8; i++) {
-            if ((i&3) === 0) {
-                tmp = arr[i/4];
-            }
-            out[i] = (tmp >>> 24);
-            tmp <<= 8;
-        }
-        return out;
+    // $TODO, fake for now
+    exports.decryptTextDataAsync = function(password, packedData) {
+        var deferred = $.Deferred();
+        var decrypted = exports.decryptTextData(packedData, password);
+        deferred.resolve(decrypted);
+        return deferred.promise();
     }
 
     return exports;

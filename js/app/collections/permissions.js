@@ -2,18 +2,16 @@ define([
     'backbone'
 ], function(Backbone) {
 
-    var PermissionModel = Backbone.Model.extend({});
-
     var PermissionCollection = Backbone.Collection.extend({
 
-        model: PermissionModel,
+        model: Backbone.Model,
 
         collections: {},
 
         initialize: function () {
             //var me = new PermissionModel({id: "me", display: "Just Me"});
             //this.add(me);
-            var all = new PermissionModel({id: "all", display: "Everyone"});
+            var all = new Backbone.Model({id: "all", display: "Everyone"});
             this.add(all);
         },
 
@@ -26,11 +24,19 @@ define([
         },
 
         addFriend: function (friend) {
-            var permissions = this;
-            $.when(friend.save()).done(function(){
-                var permission = new PermissionModel({id: friend.get('id'), display: friend.get('name')});
-                permissions.add(permission);
-            });
+            if (friend.has("id")){
+                this._addFriend(friend);
+            }
+            else {
+                $.when(friend.save()).done(function () {
+                    this._addFriend(friend);
+                }.bind(this));
+            }
+        },
+
+        _addFriend: function (friend) {
+            var permission = new Backbone.Model({id: friend.get('id'), display: friend.get('name')});
+            this.add(permission);
         },
 
         removeFriend: function (friend) {
