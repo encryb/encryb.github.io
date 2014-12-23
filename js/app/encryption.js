@@ -70,9 +70,14 @@ define([
 
     exports.saveKeys = function(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded) {
         keyCache = null;
-        localStorage.setItem("secretKey", secretKeyEncoded);
-        localStorage.setItem("publicKey", publicKeyEncoded);
-        localStorage.setItem("databaseKey", databaseKeyEncoded);
+        try {
+            localStorage.setItem("secretKey", secretKeyEncoded);
+            localStorage.setItem("publicKey", publicKeyEncoded);
+            localStorage.setItem("databaseKey", databaseKeyEncoded);
+        }
+        catch (e) {
+            console.error("Could not save keys to local storage", e);
+        }
 
         encodedKeyCache = {'databaseKey' : databaseKeyEncoded, 'publicKey' : publicKeyEncoded,
             'secretKey' : secretKeyEncoded };
