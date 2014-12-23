@@ -115,9 +115,16 @@ define([
             return keyCache;
         }
 
-        var secretKeyEncoded = localStorage.getItem("secretKey");
-        var publicKeyEncoded = localStorage.getItem("publicKey");
-        var databaseKeyEncoded = localStorage.getItem("databaseKey");
+        if (encodedKeyCache) {
+            var secretKeyEncoded = encodedKeyCache.secretKey;
+            var publicKeyEncoded = encodedKeyCache.publicKey;
+            var databaseKeyEncoded = encodedKeyCache.databaseKey;
+        }
+        else {
+            var secretKeyEncoded = localStorage.getItem("secretKey");
+            var publicKeyEncoded = localStorage.getItem("publicKey");
+            var databaseKeyEncoded = localStorage.getItem("databaseKey");
+        }
 
         if (secretKeyEncoded === null || publicKeyEncoded === null || databaseKeyEncoded === null) {
             return null;
