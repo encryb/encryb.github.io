@@ -418,7 +418,7 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                 });
                 setupView.on("keys:upload", function (keysString) {
                     var keys = JSON.parse(keysString);
-                    Encryption.saveKeys(keys['secretKey'], keys['publicKey']);
+                    Encryption.saveKeys(keys['secretKey'], keys['publicKey'], keys['databaseKey']);
                     model.set("keysLoaded", true);
                 });
                 setupView.on("keys:saveToDropbox", function (password) {

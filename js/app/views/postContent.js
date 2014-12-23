@@ -80,6 +80,7 @@ define([
                         }.bind(this));
 
                         imageElement.css("background-image", "url(" + model.escape("thumbnail") + ")");
+                        imageElement.css("background-size", "100% auto");
                         var ratio = model.resizedWidth / model.resizedHeight;
                         var cols, rows;
                         if (ratio > 2) {

@@ -20,9 +20,9 @@
                     </div>
 
                     <div class="col-xs-12 col-sm-6 clearfix">
-                        <div id="profilePicture" class="fileinput fileinput-new" data-provides="fileinput">
+                        <div id="profilePicture" class="pull-right fileinput fileinput-new" data-provides="fileinput">
                             <div class="img_container thumbnail">
-                                <div class="fileinput-new"><img id ="profilePictureExisting" src="<%- profile.get('pictureUrl') %>" /></div>
+                                <div class="fileinput-new"><img id ="profilePictureExisting" src="<%- profile.escape('pictureUrl') %>" /></div>
                                 <div id="profilePicturePreview" class="fileinput-preview fileinput-exists"></div>
                             </div>
                             <div class="btn-toolbar bottom-5">

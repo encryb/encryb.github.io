@@ -11,6 +11,8 @@ define([
     var _OLD_KEY = "global";
 
 
+    var keyCache = null;
+    var encodedKeyCache = null;
 
     /** Encrypt a binary array or a string.
      * @param {String|bitArray} key The password or key.
@@ -43,12 +45,8 @@ define([
     },
 
     exports.encryptWithEcc = function(keyString, mimeType, data, isBinary) {
-        if(keyString) {
-            var key = exports.publicHexToKey(keyString);
-        }
-        else {
-            var key = _OLD_KEY;
-        }
+
+        var key = exports.publicHexToKey(keyString);
         return exports.encrypt(key, mimeType, data, isBinary);
     };
 
@@ -62,19 +60,30 @@ define([
         var secretKeyEncoded = Sjcl.codec.hex.fromBits(secretKey);
 
         var databaseKey = Sjcl.random.randomWords(8,1);
-        var databaseKeyEncoded = JSON.stringify(databaseKey);
 
+        var databaseKeyEncoded = JSON.stringify(databaseKey);
         exports.saveKeys(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded);
+
+        keyCache = {'databaseKey' : databaseKey, 'publicKey' : publicKey, 'secretKey' : secretKey };
+
     }
 
     exports.saveKeys = function(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded) {
+        keyCache = null;
         localStorage.setItem("secretKey", secretKeyEncoded);
         localStorage.setItem("publicKey", publicKeyEncoded);
         localStorage.setItem("databaseKey", databaseKeyEncoded);
+
+        encodedKeyCache = {'databaseKey' : databaseKeyEncoded, 'publicKey' : publicKeyEncoded,
+            'secretKey' : secretKeyEncoded };
+
+
     }
 
 
     exports.removeKeys = function() {
+        keyCache = null;
+        encodedKeyCache = null;
         localStorage.removeItem("secretKey");
         localStorage.removeItem("publicKey");
         localStorage.removeItem("databaseKey");
@@ -96,6 +105,11 @@ define([
     };
 
     exports.getKeys = function() {
+
+        if (keyCache) {
+            return keyCache;
+        }
+
         var secretKeyEncoded = localStorage.getItem("secretKey");
         var publicKeyEncoded = localStorage.getItem("publicKey");
         var databaseKeyEncoded = localStorage.getItem("databaseKey");
@@ -112,15 +126,19 @@ define([
     };
 
     exports.getEncodedKeys = function() {
+        if (encodedKeyCache) {
+            return encodedKeyCache;
+        }
         var secretKeyEncoded = localStorage.getItem("secretKey");
         var publicKeyEncoded = localStorage.getItem("publicKey");
         var databaseKeyEncoded = localStorage.getItem("databaseKey");
 
-        return {
+        encodedKeyCache = {
             publicKey: publicKeyEncoded,
             secretKey: secretKeyEncoded,
             databaseKey: databaseKeyEncoded
         };
+        return encodedKeyCache;
 
     };
 

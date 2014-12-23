@@ -10,15 +10,6 @@ define([
         this.name = name;
         this.datastoreId = options.datastoreId || 'default';
         this._syncCollection = null;
-        var keys = Encryption.getKeys();
-        // $BUG handle this better
-        if (keys === null) {
-            return;
-        }
-        var databaseKey = keys.databaseKey;
-        // $BUG encryption function takes keys as bits, while decryption takes key as byte array
-        this.encryptionKey = Sjcl.codec.bytes.toBits(databaseKey);
-        this.decryptionKey = databaseKey;
     };
 
     _.extend(EncryptedDatastore.prototype, Backbone.DropboxDatastore.prototype, {
@@ -31,7 +22,7 @@ define([
             var encryptedArray = json["_enc_"];
 
             try {
-                var modelString = Encryption.decryptTextData(encryptedArray.buffer, this.decryptionKey);
+                var modelString = Encryption.decryptTextData(encryptedArray.buffer, Encryption.getKeys().databaseKey);
                 var decryptedJson = JSON.parse(modelString);
                 if (json.hasOwnProperty("id")) {
                     decryptedJson["id"] = json["id"];
@@ -56,7 +47,9 @@ define([
             var clone = _.omit(model.toJSON(), ["id"]);
             var modelString = JSON.stringify(clone);
 
-            var encrypted = Encryption.encrypt(this.encryptionKey, null, modelString, false);
+            var encryptionKey = Sjcl.codec.bytes.toBits(Encryption.getKeys().databaseKey);
+
+            var encrypted = Encryption.encrypt(encryptionKey, null, modelString, false);
             var encryptedArray  = new Uint8Array(encrypted);
             var json = {};
             if (model.has("id")) {
@@ -66,10 +59,6 @@ define([
             return json;
         }
     });
-
-    Backbone.DropboxDatastore.decryptJSON = function(json, key) {
-    }
-
 
     return EncryptedDatastore;
 });
