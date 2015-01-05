@@ -18,6 +18,7 @@ define([
         var caption = content.get("caption");
         var thumbnail = content.get("thumbnail");
         var image = content.get("image");
+        var video = content.get("video");
         var data = content.get("data");
 
         var uploadCaption = null;
@@ -34,6 +35,36 @@ define([
                         .then(setCaptionUrl);
         }
 
+
+        var uploadAsset = function(asset, path, setUrl) {
+            if (asset instanceof File) {
+                return uploadFileAsset(asset, path, setUrl);
+            }
+            var typedArray = DataConvert.dataUriToTypedArray(asset);
+            return Encryption.encryptAsync(password, typedArray['mimeType'], typedArray['data'].buffer)
+                .then(Storage.uploadDropbox.bind(null, path))
+                .then(Storage.shareDropbox)
+                .then(setUrl);
+        }
+
+        var uploadFileAsset = function(file, path, setUrl) {
+
+            var deferred = $.Deferred();
+            var fileReader = new FileReader();
+            fileReader.onload = function() {
+                var buffer = fileReader.result;
+                Encryption.encryptAsync(password, file.type, buffer)
+                    .then(Storage.uploadDropbox.bind(null, path))
+                    .then(Storage.shareDropbox)
+                    .then(setUrl).done( function() {
+                        deferred.resolve(arguments);
+                    });
+            }
+            fileReader.readAsArrayBuffer(file);
+            return deferred.promise();
+        }
+
+
         var uploadThumbnail = null;
         if (thumbnail) {
 
@@ -41,12 +72,8 @@ define([
             var setThumbnailUrl = function(url) {
                 content.set("thumbnailUrl", url);
             };
+            uploadThumbnail = uploadAsset(thumbnail, thumbPath, setThumbnailUrl);
 
-            var thumbnailDict = DataConvert.dataUriToTypedArray(thumbnail);
-            uploadThumbnail = Encryption.encryptAsync(password, thumbnailDict['mimeType'], thumbnailDict['data'].buffer)
-                              .then(Storage.uploadDropbox.bind(null, thumbPath))
-                              .then(Storage.shareDropbox)
-                              .then(setThumbnailUrl);
         }
 
         var uploadImage = null;
@@ -56,11 +83,17 @@ define([
                 content.set("imageUrl", url);
             };
 
-            var imageDict = DataConvert.dataUriToTypedArray(image);
-            uploadThumbnail = Encryption.encryptAsync(password, imageDict['mimeType'], imageDict['data'].buffer)
-                              .then(Storage.uploadDropbox.bind(null, imagePath))
-                              .then(Storage.shareDropbox)
-                              .then(setImageUrl);
+            uploadImage = uploadAsset(image, imagePath, setImageUrl);
+        }
+
+        var uploadVideo = null;
+        if (video) {
+            var videoPath = Storage.getImagePath(folderPath, contentNumber);
+            var setVideoUrl = function(url) {
+                content.set("videoUrl", url);
+            };
+
+            uploadVideo = uploadAsset(video, videoPath, setVideoUrl);
         }
 
         var uploadData = null;
@@ -70,15 +103,10 @@ define([
                 content.set("dataUrl", url);
             };
 
-            var dataDict = DataConvert.dataUriToTypedArray(data);
-            console.log(dataDict);
-            uploadThumbnail = Encryption.encryptAsync(password, dataDict['mimeType'], dataDict['data'].buffer)
-                .then(Storage.uploadDropbox.bind(null, dataPath))
-                .then(Storage.shareDropbox)
-                .then(setDataUrl);
+            uploadData = uploadAsset(data, dataPath, setDataUrl);
         }
 
-        $.when(uploadCaption, uploadThumbnail, uploadImage, uploadData).done(function() {
+        $.when(uploadCaption, uploadThumbnail, uploadImage, uploadVideo, uploadData).done(function() {
             deferred.resolve();
         });
         return deferred.promise();
@@ -163,6 +191,24 @@ define([
                                 .done(function (fullImage) {
                                     content.set("image", fullImage);
                                     deferred.resolve(fullImage);
+                                });
+                        }
+                        return deferred.promise();
+                    }
+
+                    // setup a function that fetches the full size image and attach it directly to content object
+                    content.getVideo = function () {
+                        var deferred = $.Deferred();
+                        if (content.has("video")) {
+                            deferred.resolve(content.get("video"));
+                        }
+                        else {
+                            var videoUrl = content.get("videoUrl");
+                            Storage.downloadUrl(videoUrl)
+                                .then(Encryption.decryptImageDataAsync.bind(null, password))
+                                .done(function (video) {
+                                    content.set("video", video);
+                                    deferred.resolve(video);
                                 });
                         }
                         return deferred.promise();

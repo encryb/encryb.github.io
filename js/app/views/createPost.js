@@ -9,10 +9,12 @@ define([
     'app/app',
     'app/adapters/post',
     'app/models/post',
+    'compat/windowUrl',
     'utils/image',
     'require-text!app/templates/createPost.html'
 
-], function($, _, Backbone, Bootbox, Dropzone, Marionette, Selectize, App, PostAdapter, Post, ImageUtil, CreatePostTemplate){
+], function($, _, Backbone, Bootbox, Dropzone, Marionette, Selectize, App,
+            PostAdapter, Post, WindowUrl, ImageUtil, CreatePostTemplate){
 
     var NewPostView = Marionette.CompositeView.extend({
         template: _.template( CreatePostTemplate ),
@@ -104,32 +106,45 @@ define([
 
                 var loadDeferred = $.Deferred();
                 deferreds.push(loadDeferred);
-                var fileReader = new FileReader();
-                fileReader.onload = (function(_file, _fileReader, _loadDeferred, _content) {
-                    return function() {
 
-                        if (_file.type.match(/image.*/)) {
-                            var image = new Image();
-                            image.src = _fileReader.result;
+                if (file.type.match(/image.*/)) {
+                    var image = new Image();
+                    image.src = WindowUrl.createObjectURL(file);
 
-                            image.onload = function () {
-                                var resized = ImageUtil.resize(image, 1920, 1440);
-                                _content['thumbnail'] = resized.thumbnail;
-                                _content['image'] = resized.fullsize;
-                                _loadDeferred.resolve();
-                            }
-                        }
-                        else {
-                            _content['data'] = _fileReader.result;
-                            _content['filename'] = _file.name;
-                            console.log("content", content);
+                    image.onload = (function(_image, _loadDeferred, _content) {
+                        return function () {
+                            var resized = ImageUtil.resize(_image, 1920, 1440);
+                            WindowUrl.revokeObjectURL(image.src);
+                            _content['thumbnail'] = resized.thumbnail;
+                            _content['image'] = resized.fullsize;
                             _loadDeferred.resolve();
-                        }
-                    }
-                })(file, fileReader, loadDeferred, content);
-                fileReader.readAsDataURL(file);
+                        };
+                    }(image, loadDeferred, content));
+                }
+                else if (file.type.match(/video.*/)) {
+                    var video =  document.createElement('video');
+                    video.src = WindowUrl.createObjectURL(file);
 
+                    $(video).one("loadedmetadata", function(_video, _file, _loadDeferred, _content) {
+                        return function() {
+                            $(_video).one("seeked", function() {
+                                var frame = ImageUtil.captureFrame(_video, 480, 360);
+                                WindowUrl.revokeObjectURL(video.src);
+                                _content['video'] = _file;
+                                _content['thumbnail'] = frame;
+                                _loadDeferred.resolve();
+                            });
+                            _video.currentTime = _video.duration / 3;
+                        };
+                    }(video, file, loadDeferred, content));
+                }
+                else {
+                    content['data'] = file;
+                    content['filename'] = file.name;
+                    loadDeferred.resolve();
+                }
                 contentList.push(content);
+
             }
 
             $.when.apply($, deferreds).done(function() {
@@ -194,7 +209,7 @@ define([
                         e.preventDefault();
                         e.stopPropagation();
                         Bootbox.prompt({
-                            title: "Image Caption:",
+                            title: "Caption:",
                             value: file.caption ? file.caption: "",
                             inputType: "textarea",
                             callback : function(result) {

@@ -10,10 +10,11 @@ define([
     'app/collections/persist/upvotes',
     'app/collections/persist/invites',
     'app/models/postWrapper',
+    'app/models/post',
     'app/services/dropbox'
 ], function(Backbone, Marionette, _, FilteredCollection, App,
             PostColl, FriendColl,  CommentColl, UpvoteColl, InviteColl,
-            PostWrapper, Dropbox) {
+            PostWrapper, Post, Dropbox) {
 
     var State = Marionette.Object.extend({
 
@@ -95,6 +96,7 @@ define([
                 state.myFriends.fetch(),
                 state.myInvites.fetch()
             ).done(function() {
+                console.log("friends", state.myFriends);
                 deferred.resolve(state);
             });
             return this.fetchPromise;
@@ -106,9 +108,12 @@ define([
             if (post.has("id")){
                 return this._onMyPostAdded(post);
             }
-            $.when(post.save()).done(function(){
+            var onSuccess = function(){
                 this._onMyPostAdded(post);
-            }.bind(this));
+            }.bind(this);
+
+            post.save(null, {wait:true, success: onSuccess});
+
         },
         _onMyPostAdded: function(post) {
             var wrapper = new PostWrapper();
@@ -159,7 +164,10 @@ define([
 
         addFriendsPost: function(post, friend) {
             var wrapper = new PostWrapper();
-            wrapper.setFriendsPost(post, friend);
+
+            var postModel = new Post(post, {parse: true});
+
+            wrapper.setFriendsPost(postModel, friend);
             this.posts.add(wrapper);
             var postComments = this.comments.where({postId: wrapper.get("postId")});
             for (var i=0; i<postComments.length; i++) {

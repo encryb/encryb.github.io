@@ -1,15 +1,13 @@
 define([
     'sjcl',
     'sjcl-worker/sjclWorkerInclude',
+    'compat/windowUrl',
     'utils/data-convert',
     'utils/encoding',
     'utils/sjcl-convert'
-], function(Sjcl, SjclWorker, DataConvert, Encoding, SjclConvert){
+], function(Sjcl, SjclWorker, WindowUrl, DataConvert, Encoding, SjclConvert){
 
     var exports = {};
-
-    var _OLD_KEY = "global";
-
 
     var keyCache = null;
     var encodedKeyCache = null;
@@ -59,14 +57,18 @@ define([
         var publicKeyEncoded = Sjcl.codec.hex.fromBits(publicKey.x) + Sjcl.codec.hex.fromBits(publicKey.y);
         var secretKeyEncoded = Sjcl.codec.hex.fromBits(secretKey);
 
-        var databaseKey = Sjcl.random.randomWords(8,1);
+        var databaseKey = exports.generateDatabaseKey();
 
         var databaseKeyEncoded = JSON.stringify(databaseKey);
         exports.saveKeys(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded);
 
         keyCache = {'databaseKey' : databaseKey, 'publicKey' : publicKey, 'secretKey' : secretKey };
 
-    }
+    },
+
+    exports.generateDatabaseKey = function() {
+        return Sjcl.codec.bytes.fromBits(Sjcl.random.randomWords(8,1));
+    },
 
     exports.saveKeys = function(secretKeyEncoded, publicKeyEncoded, databaseKeyEncoded) {
         keyCache = null;
@@ -165,20 +167,12 @@ define([
         return ct;
     }
 
-    exports.decryptImageData = function(packedData, password) {
-        var data = Encoding.decode(packedData);
-        var ct = decrypt(data, password);
-        var decrypted = Sjcl.codec.arrayBuffer.fromBits(ct);
-        var imageData = "data:" +  data.mimeType + ";base64," + DataConvert.arrayToBase64(decrypted);
-        return imageData;
-    }
-
     exports.decryptImageDataAsync = function(password, packedData) {
         var deferred = $.Deferred();
 
         SjclWorker.sym.decrypt(packedData, password, function(error, decrypted) {
-            var imageData = "data:" +  decrypted.mimeType + ";base64,"+ DataConvert.arrayToBase64(decrypted.data);
-            deferred.resolve(imageData);
+            var blob = new Blob([decrypted.data], {type: decrypted.mimeType});
+            deferred.resolve(WindowUrl.createObjectURL(blob));
         });
 
         return deferred.promise();
@@ -192,7 +186,7 @@ define([
         return decrypted;
     }
 
-    // $TODO, fake for now
+    // $TODO, still sync for now
     exports.decryptTextDataAsync = function(password, packedData) {
         var deferred = $.Deferred();
         var decrypted = exports.decryptTextData(packedData, password);

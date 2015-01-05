@@ -664,10 +664,15 @@
 			openMedia : function ( index ) {
 				var $this = this,
 					src,
-					slide;
+					slide,
+					isHostedVideo = false;
 
 				if ( elements[ index ] !== undefined ) {
-					src = elements[ index ].href;
+					var elem = elements[ index ];
+					src = elem.href;
+					if (elem.video) {
+						isHostedVideo = true;
+					}
 				}
 
 				if ( index < 0 || index >= elements.length ) {
@@ -679,7 +684,7 @@
 
 				var _openMedia = function(media) {
 					if (!$this.isVideo(media)) {
-						$this.loadMedia(media, function () {
+						$this.loadMedia(media, isHostedVideo,  function () {
 							slide.removeClass('slide-loading');
 							slide.html(this);
 						});
@@ -768,17 +773,24 @@
 
 				return '<div class="swipebox-video-container" style="max-width:' + plugin.settings.videomaxWidth + 'px"><div class="swipebox-video">'+iframe+'</div></div>';
 			},
-			
+
 			/**
 			 * Load image
 			 */
-			loadMedia : function ( src, callback ) {
-					if ( ! this.isVideo( src ) ) {
+			loadMedia : function ( src, isHostedVideo, callback ) {
+				if (  !isHostedVideo ) {
 					var img = $( '<img>' ).on( 'load', function() {
 						callback.call( img );
 					} );
 
 					img.attr( 'src', src );
+				}
+				else {
+					var video = $('<video controls style="max-width:80%; max-height:80%">').on( 'loadedmetadata', function() {
+						callback.call( video );
+					} );
+
+					video.attr('src', src);
 				}
 			},
 			

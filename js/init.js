@@ -9,6 +9,7 @@ require.config({
 
 	paths: {
 		app: '../app',
+        compat: '../compat',
 		utils: '../utils',
         dropbox: 'https://www.dropbox.com/static/api/dropbox-datastores-1.2-latest',
         marionette: 'backbone.marionette',

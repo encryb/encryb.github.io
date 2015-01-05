@@ -16,9 +16,13 @@ define([
 
         recordToJson: function(record) {
             var json = Backbone.DropboxDatastore.recordToJson(record);
+
+            var exception = null;
+
             if (!json.hasOwnProperty("_enc_")) {
                 return json;
             }
+
             var encryptedArray = json["_enc_"];
 
             try {
@@ -30,17 +34,28 @@ define([
                 return decryptedJson;
             }
             catch (e) {
-
-                // $BUG We need to display errors in a bit better way
-                var decryptedJson = {};
-                if (json.hasOwnProperty("id")) {
-                    decryptedJson["id"] = json["id"];
-                }
-                decryptedJson["created"] = new Date().getTime();
-
-                decryptedJson["text"] = "Could not decrypt post: " + e.toLocaleString();
-                return decryptedJson;
+                exception = e;
             }
+
+            // we have _enc_, but could not decrypt. Check if there is any plain data and if so return it without _enc_
+            console.log("keys", Object.keys(json));
+            if (Object.keys(json).length > 2) {
+                return _.omit(json, "_enc_");
+            }
+
+            if (exception){
+                // $BUG We need to display errors in a bit better way
+                var errorJson = {};
+                if (json.hasOwnProperty("id")) {
+                    errorJson["id"] = json["id"];
+                }
+                errorJson["created"] = new Date().getTime();
+                errorJson["error"] = exception.toLocaleString();
+                return errorJson;
+            }
+
+            return json;
+
         },
 
         modelToJson: function(model) {

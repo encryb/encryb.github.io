@@ -2,4 +2,8 @@
     <% if (typeof caption !== "undefined") { %>
         <div class="absolute-bottom picture-text"><%- caption %></div>
     <% } %>
+    <% if (typeof videoUrl !== "undefined") { %>
+        <span class="glyphicon glyphicon-play-circle video-icon" aria-hidden="true"></span>
+    <% } %>
+
 </div>

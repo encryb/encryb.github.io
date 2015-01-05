@@ -94,6 +94,37 @@ define(function() {
 
     };
 
+
+    exports.captureFrame = function(video, maxWidth, maxHeight) {
+
+        var width = video.videoWidth;
+        var height = video.videoHeight;
+
+        if (width > height) {
+            if (width > maxWidth) {
+                height *= maxWidth / width;
+                width = maxWidth;
+            }
+        }
+        else {
+            if (height > maxHeight) {
+                width *= maxHeight / height;
+                height = maxHeight;
+            }
+        }
+
+        var canvas = document.createElement("canvas");
+
+        canvas.width = width;
+        canvas.height = height;
+        var canvasContext = canvas.getContext("2d");
+
+        canvasContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+        var fullsize =  canvas.toDataURL("image/jpeg");
+
+        return fullsize;
+    };
+
     return exports;
 
 });

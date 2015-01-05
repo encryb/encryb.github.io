@@ -18,6 +18,7 @@ define([
             upvotes: "#upvotes",
             comments: "#comments"
         },
+
         onRender: function () {
             this.setupChildren();
         },
@@ -69,7 +70,26 @@ define([
     });
 
     var PostsView = Marionette.CollectionView.extend({
-        childView: PostView
+        childView: PostView,
+
+
+        initialize:function() {
+            $(window).on("scroll",this.expandCollection.bind(this))
+        },
+
+        remove: function() {
+            $(window).off("scroll",this.expandCollection.bind(this));
+            Backbone.View.prototype.remove.apply(this, arguments);
+        },
+
+        expandCollection: function() {
+            // if user scrolls the bottom of the wall, add more posts to the wall
+            var postsBottom = $('#posts').prop("scrollHeight") + $("#posts").offset().top;
+            var pageBottom = $(window).scrollTop() + window.innerHeight;
+            if ( postsBottom <= pageBottom + 10) {
+                this.collection.increaseLimit(5);
+            }
+        }
     });
     return PostsView;
 });

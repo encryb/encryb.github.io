@@ -109,15 +109,6 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                     collection: paged
                 });
                 wall.posts.show(postsView);
-
-                // if user scrolls the bottom of the wall, add more posts to the wall
-                $(window).scroll(function() {
-                    var postsBottom = $('#posts').prop("scrollHeight") + $("#posts").offset().top;
-                    var pageBottom = $(window).scrollTop() + window.innerHeight;
-                    if ( postsBottom <= pageBottom + 10) {
-                        paged.increaseLimit(5);
-                    }
-                });
             });
 
 
@@ -266,9 +257,11 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                     uiNotifyDeferred.resolve();
 
                     // made sure we get get Id for this post before we save
-                    $.when(postModel.save()).done(function() {
+                    var onSuccess = function(){
                         FriendAdapter.saveManifests();
-                    });
+                    }.bind(this);
+
+                    postModel.save(null, {wait:true, success: onSuccess});
                 });
             });
 
@@ -421,18 +414,36 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                     Encryption.saveKeys(keys['secretKey'], keys['publicKey'], keys['databaseKey']);
                     model.set("keysLoaded", true);
                 });
-                setupView.on("keys:saveToDropbox", function (password) {
+
+                var saveKeysToDropbox = function(password) {
                     var keys = Encryption.getEncodedKeys();
                     var jsonKeys = JSON.stringify(keys);
                     var encKeys = Encryption.encrypt(password, "text/keys", jsonKeys, false);
                     Dropbox.uploadDropbox("encryb.keys", encKeys);
+                }
+
+
+                setupView.on("keys:saveToDropbox", function (password) {
+                    saveKeysToDropbox(password);
                 });
 
                 setupView.on("keys:loadFromDropbox", function(password){
                     $.when(Dropbox.downloadDropbox("encryb.keys")).done(function(encKeys){
                         var jsonKeys = Encryption.decryptTextData(encKeys, password);
                         var keys = JSON.parse(jsonKeys);
+                        var forceSave = false;
+
+                        // $LEGACY
+                        if (!keys.hasOwnProperty('databaseKey')) {
+                            keys.databaseKey = JSON.stringify(Encryption.generateDatabaseKey());
+                            forceSave = true;
+                        }
+
                         Encryption.saveKeys(keys.secretKey, keys.publicKey, keys.databaseKey);
+                        if (forceSave) {
+                            saveKeysToDropbox(password);
+                        }
+
                         model.set("keysLoaded", true);
                     });
                 })

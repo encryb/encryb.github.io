@@ -71,11 +71,11 @@ define([
             this.set('userId', userId);
         },
 
-        setFriendsPost: function(post, friend) {
-            var attr = _.extend(post, {poster: friend, myPost: false});
+        setFriendsPost: function(postModel, friend) {
+            var attr = _.extend(_.clone(postModel.attributes), {poster: friend, myPost: false});
             var model = new Backbone.Model(attr);
             this.set("post", model);
-            this.setPostId(friend.get("userId"), post.id);
+            this.setPostId(friend.get("userId"), postModel.get("id"));
             this.set('userId', friend.get("userId"));
         },
 

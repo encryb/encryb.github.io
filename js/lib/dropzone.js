@@ -1059,45 +1059,34 @@
     };
 
     Dropzone.prototype.createThumbnail = function(file, callback) {
-      var fileReader;
-      fileReader = new FileReader;
-      fileReader.onload = (function(_this) {
-        return function() {
-          var img;
-          if (file.type === "image/svg+xml") {
-            _this.emit("thumbnail", file, fileReader.result);
-            if (callback != null) {
-              callback();
-            }
-            return;
-          }
-          img = document.createElement("img");
-          img.onload = function() {
-            var canvas, ctx, resizeInfo, thumbnail, _ref, _ref1, _ref2, _ref3;
-            file.width = img.width;
-            file.height = img.height;
-            resizeInfo = _this.options.resize.call(_this, file);
-            if (resizeInfo.trgWidth == null) {
-              resizeInfo.trgWidth = resizeInfo.optWidth;
-            }
-            if (resizeInfo.trgHeight == null) {
-              resizeInfo.trgHeight = resizeInfo.optHeight;
-            }
-            canvas = document.createElement("canvas");
-            ctx = canvas.getContext("2d");
-            canvas.width = resizeInfo.trgWidth;
-            canvas.height = resizeInfo.trgHeight;
-            drawImageIOSFix(ctx, img, (_ref = resizeInfo.srcX) != null ? _ref : 0, (_ref1 = resizeInfo.srcY) != null ? _ref1 : 0, resizeInfo.srcWidth, resizeInfo.srcHeight, (_ref2 = resizeInfo.trgX) != null ? _ref2 : 0, (_ref3 = resizeInfo.trgY) != null ? _ref3 : 0, resizeInfo.trgWidth, resizeInfo.trgHeight);
-            thumbnail = canvas.toDataURL("image/png");
-            _this.emit("thumbnail", file, thumbnail);
-            if (callback != null) {
-              return callback();
-            }
-          };
-          return img.src = fileReader.result;
-        };
-      })(this);
-      return fileReader.readAsDataURL(file);
+
+      var img;
+
+      img = document.createElement("img");
+      img.onload = function() {
+        var canvas, ctx, resizeInfo, thumbnail, _ref, _ref1, _ref2, _ref3;
+        file.width = img.width;
+        file.height = img.height;
+        resizeInfo = this.options.resize.call(this, file);
+        if (resizeInfo.trgWidth == null) {
+          resizeInfo.trgWidth = resizeInfo.optWidth;
+        }
+        if (resizeInfo.trgHeight == null) {
+          resizeInfo.trgHeight = resizeInfo.optHeight;
+        }
+        canvas = document.createElement("canvas");
+        ctx = canvas.getContext("2d");
+        canvas.width = resizeInfo.trgWidth;
+        canvas.height = resizeInfo.trgHeight;
+        drawImageIOSFix(ctx, img, (_ref = resizeInfo.srcX) != null ? _ref : 0, (_ref1 = resizeInfo.srcY) != null ? _ref1 : 0, resizeInfo.srcWidth, resizeInfo.srcHeight, (_ref2 = resizeInfo.trgX) != null ? _ref2 : 0, (_ref3 = resizeInfo.trgY) != null ? _ref3 : 0, resizeInfo.trgWidth, resizeInfo.trgHeight);
+        thumbnail = canvas.toDataURL("image/png");
+        this.emit("thumbnail", file, thumbnail);
+        if (callback != null) {
+          return callback();
+        }
+      }.bind(this);
+      return img.src = window.URL.createObjectURL(file);
+
     };
 
     Dropzone.prototype.processQueue = function() {

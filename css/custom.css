@@ -416,4 +416,10 @@ ul.collection-list li {
     display: block;
 }
 
+.video-icon {
+    color: #FFFFFF;
+    font-size: 4rem;
+    padding: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
 
+}

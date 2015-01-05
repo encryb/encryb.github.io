@@ -95,7 +95,17 @@ define([
                             cols = 7;
                             rows = 4;
                         }
-                        if (isFirst) {
+                        if (collection.length == 1) {
+                            if (ratio >= 1) {
+                                cols = cols * 3;
+                                rows = rows * 3;
+                            }
+                            else {
+                                cols = cols * 2;
+                                rows = rows * 2;
+                            }
+                        }
+                        else if (isFirst || collection.length == 2) {
                             if (ratio >= 1) {
                                 cols = cols * 2;
                                 rows = rows * 2;
@@ -134,7 +144,7 @@ define([
                 postImagesElement.cloudGrid({
                     children: imageChildren,
                     gridGutter: 3,
-                    gridSize: 20
+                    gridSize: 18
                 });
 
                 postFilesElement.cloudGrid({
@@ -153,7 +163,12 @@ define([
         showImage: function(index){
             var swipeboxArgs = [];
             this.model.get("content").each(function(content) {
-                swipeboxArgs.push({href:content.getFullImage(),title:content.get("caption")|| ""})
+                if (content.has("videoUrl")) {
+                    swipeboxArgs.push({href:content.getVideo(), video:true, title:content.get("caption")|| ""});
+                }
+                else {
+                    swipeboxArgs.push({href:content.getFullImage(), title:content.get("caption")|| ""});
+                }
             });
             $.swipebox(swipeboxArgs, {initialIndexOnArray:index});
         },

@@ -5,7 +5,7 @@ define([
 
     var Post = Backbone.Model.extend({
 
-        nonPersistent: [ "caption", "thumbnail", "image", "data"],
+        nonPersistent: [ "caption", "thumbnail", "image", "video", "data"],
 
         toJSON: function() {
 
