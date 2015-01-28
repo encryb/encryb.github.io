@@ -1,23 +1,24 @@
 <div class="row">
     <div class="col-xs-12">
-        <strong><%- commenter.get("name") %></strong>
+        <strong><%- commenter.escape("name") %></strong>
         <span class="small">
             <%- prettyTime() %>
         </span>
+        <button class="btn btn-sm btn-default quoteComment">
+            <span class="fa fa-quote-right"></span>
+        </button>
         <% if (myComment) { %>
         <div class="dropdown pull-right">
             <button class="btn btn-default dropdown-toggle" type="button" id="commentDropdown" data-toggle="dropdown">
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu dropdown-menu-right" role="menu" aria-labelledby="commentDropdown">
-                <li role="presentation"><a id="deleteComment" role="menuitem" tabindex="-1" href="#">Delete</a></li>
+                <li role="presentation"><a class="deleteComment" role="menuitem" tabindex="-1" href="#">Delete</a></li>
             </ul>
         </div>
         <% } %>
     </div>
     <div class="col-xs-12">
-        <div>
-            <%- text %>
-        </div>
+        <div style="white-space: pre-wrap"><%- text %></div>
     </div>
 </div>

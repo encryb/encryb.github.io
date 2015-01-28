@@ -23,6 +23,8 @@ define([
 
         ui: {
             profilePicture: "#profilePicture",
+            newProfilePicture: "#newProfilePicture",
+            newProfile: "#newProfile",
             profilePictureExisting: "#profilePictureExisting",
             updateButton: "#updateButton",
             createButton: "#createAccount",
@@ -32,27 +34,33 @@ define([
         events: {
             "input #name": "nameChange",
             "change #intro": "introChange",
-            "change.bs.fileinput @ui.profilePicture": "pictureChange",
-            "click @ui.profilePicture #cancelButton": "pictureCancelButton",
-            "click @ui.profilePicture #applyButton": "pictureApplyButton",
+            "change @ui.profilePicture": "onPictureChange",
+            "change #pictureInput": "updatePicture",
+            "click #cropPictureButton": "cropPictureButton",
             "click @ui.updateButton": "updateProfile",
             "click @ui.createButton": "createProfile"
         },
 
         triggers: {
-            "click #editKey" : "key:edit",
-            "click #cloudRefresh": "key:cloudRefresh"
+            "click #editKey" : "key:edit"
         },
 
         updateProfile: function() {
-            console.log(this.changes);
+            if (this.needsCrop) {
+                this.cropPicture();
+            }
+
             this.trigger("profile:updated", this.changes);
         },
 
         createProfile: function() {
+            if (this.needsCrop) {
+                this.cropPicture();
+            }
+
             this.ui.createButton.addClass("hide");
             this.ui.loadingImage.removeClass("hide");
-            this.trigger("profile:create");
+            this.trigger("profile:create", this.changes);
         },
 
         nameChange: function(event){
@@ -72,29 +80,61 @@ define([
             this.changes['intro'] = intro;
         },
 
-        pictureCancelButton: function() {
-            event.preventDefault();
-            this.ui.profilePicture.fileinput("reset");
+        updatePicture: function(input) {
+            var files = input.files ? input.files : input.currentTarget.files;
+            if (files && files[0]) {
+                var reader = new FileReader();
+
+                reader.onload = function (e) {
+                    // there is no way to update existing picture that has JCrop attached
+                    // instead for each image, create a new img element
+                    this.ui.newProfilePicture.html("<img class='img-responsive'>");
+                    var img = this.ui.newProfilePicture.children();
+                    img.one("load", function() {
+                        this.onPictureChange();
+                    }.bind(this));
+                    img.attr("src", e.target.result);
+                    this.ui.newProfile.removeClass("hide");
+                    this.ui.profilePicture.addClass("hide");
+                }.bind(this);
+
+                reader.readAsDataURL(files[0]);
+            }
+
         },
-        pictureApplyButton: function(event) {
+        cropPictureButton: function(event) {
             event.preventDefault();
+            this.cropPicture();
+        },
+        cropPicture: function() {
             var select = this.jcrop_profile.tellSelect();
-            var image = $("#profilePicturePreview img")[0];
 
+            var image = this.ui.newProfilePicture.children()[0];
             var resized = ImageUtil.cropAndResize(image, 360, 300, select.x, select.y, select.w, select.h);
-            this.ui.profilePictureExisting.attr('src', resized);
-            this.ui.profilePicture.fileinput("reset");
+            this.ui.profilePicture.attr("src", resized);
+            this.ui.newProfile.addClass("hide");
+            this.jcrop_profile.release();
+            this.ui.profilePicture.removeClass("hide");
             this.changes['picture'] = resized;
-
+            this.needsCrop = false;
         },
-        pictureChange: function(){
+        onPictureChange: function(){
+            this.needsCrop = true;
             var view = this;
-            var image = $("#profilePicturePreview img");
+            var image = this.ui.newProfilePicture.children();
             var size = ImageUtil.getNaturalSize(image);
+            var vertGap = size.width / 10;
+            var horzGap = size.height / 10;
             image.Jcrop({
                 aspectRatio: 1.2,
-                setSelect: [0, 0, 360, 300],
-                trueSize: [size.width, size.height]
+                setSelect: [vertGap, horzGap, size.width - vertGap, size.height - horzGap],
+                trueSize: [size.width, size.height],
+                onRelease: function() {
+                    var select = view.jcrop_profile.tellSelect();
+                    if (select.w == 0 || select.h == 0) {
+                        view.jcrop_profile.setSelect([vertGap, horzGap, size.width - vertGap, size.height - horzGap])
+                    }
+                }
             },function(){
                 view.jcrop_profile = this;
             });

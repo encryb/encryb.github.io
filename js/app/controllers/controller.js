@@ -1,6 +1,7 @@
 define([
     'backbone',
     'marionette',
+    'bootbox',
     'app/app',
     'app/adapters/friend',
     'app/adapters/post',
@@ -10,6 +11,7 @@ define([
     'app/models/post',
     'app/views/wall',
     'app/views/createPost',
+    'app/views/editPost',
     'app/views/posts',
     'app/views/friend',
     'app/views/headerPanel',
@@ -21,8 +23,8 @@ define([
     'utils/collection-paged',
     'utils/data-convert'
     ],
-function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, PermissionColl, FriendModel, PostModel,
-          WallView, CreatePostView, PostsView, FriendsView, HeaderPanelView, InvitesView, ChatsView,
+function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State, PermissionColl, FriendModel, PostModel,
+          WallView, CreatePostView, EditPostView, PostsView, FriendsView, HeaderPanelView, InvitesView, ChatsView,
           Encryption, AppEngine, Dropbox, CollectionPaged, DataConvert) {
 
 
@@ -152,7 +154,7 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                 else {
                     wall.ui.invitePanel.removeClass("hide");
                 }
-            }
+            };
 
             // hide invites panel if there are no invites
             this.listenTo(App.state.myInvites, "all", showHideInvites);
@@ -242,21 +244,17 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
 
             wall.listenTo(App.vent, "post:created", function(postMeta, contentList, uiNotifyDeferred) {
                 var postModel = new PostModel(postMeta);
-                var contentCollection = new Backbone.Collection();
-                for (var i=0; i<contentList.length; i++) {
-                    var content = contentList[i];
-                    var contentModel = new Backbone.Model(content);
-                    contentCollection.add(contentModel);
-                }
-                postModel.set("content", contentCollection);
-
+                postModel.contentList = contentList;
                 var upload = PostAdapter.uploadPost(postModel);
                 $.when(upload).done(function() {
 
+                    var jsonContent = PostAdapter.removeNonPersistentFields(contentList);
+                    postModel.set("content", jsonContent);
                     App.state.myPosts.add(postModel);
                     uiNotifyDeferred.resolve();
 
                     // made sure we get get Id for this post before we save
+                    // $BUG: (Why bind?)
                     var onSuccess = function(){
                         FriendAdapter.saveManifests();
                     }.bind(this);
@@ -265,6 +263,70 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                 });
             });
 
+            var editPostDialog;
+            var editPostView;
+            var editPostModel;
+            var editPostRegion;
+            wall.listenTo(App.vent, "post:edit", function(post) {
+                editPostDialog = Bootbox.dialog({
+                    message: "<div id='bootbox'></div>",
+                    closeButton: false
+                });
+                editPostRegion = new Backbone.Marionette.Region({
+                    el: "#bootbox"
+                });
+                editPostView = new EditPostView({
+                    model: post.get("post"),
+                    permissions: perms
+                });
+                editPostRegion.show(editPostView);
+                editPostModel = post;
+            });
+
+            wall.listenTo(App.vent, "post:edit:canceled", function() {
+                editPostRegion.reset();
+                editPostDialog.modal("hide");
+            });
+            // addedContent is an array of JSON objects
+            // removedContent is an array of Backbone Models
+            wall.listenTo(App.vent, "post:edited", function(changes, addedContent, removedContent){
+                var persistModel = editPostModel.postModel;
+
+
+                var onEditSuccess = function() {
+                    // update display model
+                    editPostModel.updateDisplayModel(changes, addedContent, removedContent);
+
+                    // content is array of JSON objects
+                    var currentContent = persistModel.get("content");
+
+                    var contentAfterRemoval = $.grep(currentContent, function(searchContent) {
+                        // only return values that are not part of removedContent collection
+                        var foundRemoval = $.grep(removedContent, function(searchRemoved) {
+                            if (searchContent.number == searchRemoved.get("number")) {
+                                return true;
+                            }
+                        });
+                        if (foundRemoval.length == 0) {
+                            return true;
+                        }
+                    });
+
+                    var updatedContent = contentAfterRemoval.concat(PostAdapter.removeNonPersistentFields(addedContent));
+                    changes["content"] = updatedContent;
+
+
+                    persistModel.save(changes, {success: function() {
+                        FriendAdapter.saveManifests();
+                        editPostView.destroy();
+                        editPostDialog.modal("hide");
+                    }});
+                }.bind(this);
+                // update persisted model
+                $.when(PostAdapter.updatePost(persistModel, changes, addedContent, removedContent))
+                    .done(onEditSuccess);
+
+            });
             wall.listenTo(App.vent, "post:deleted", function(post) {
                 PostAdapter.deletePost(post);
                 post.deletePost();
@@ -292,7 +354,7 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                     return;
                 }
                 Dropbox.downloadUrl(content.get('dataUrl'))
-                    .then(Encryption.decryptImageDataAsync.bind(null, password))
+                    .then(Encryption.decryptDataAsync.bind(null, password))
                     .done(function(data) {
                         content.set("data", data);
                         startDownload(data, content.get("filename"));
@@ -429,7 +491,7 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
 
                 setupView.on("keys:loadFromDropbox", function(password){
                     $.when(Dropbox.downloadDropbox("encryb.keys")).done(function(encKeys){
-                        var jsonKeys = Encryption.decryptTextData(encKeys, password);
+                        var jsonKeys = Encryption.decryptText(encKeys, password);
                         var keys = JSON.parse(jsonKeys);
                         var forceSave = false;
 
@@ -465,7 +527,7 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
             require(["app/views/profile"], function (ProfileView) {
                 var model = new Backbone.Model();
                 model.set("profile", profile);
-                model.set("publicKey", Encryption.getEncodedKeys().publicKey)
+                model.set("publicKey", Encryption.getEncodedKeys().publicKey);
                 var profileView = new ProfileView({model: model});
                 App.main.show(profileView);
 
@@ -483,16 +545,14 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                         }
                     });
                 });
-                profileView.on("profile:create", function() {
-                    AppEngine.createProfile(profile, Dropbox.client.dropboxUid());
-                });
-                profileView.on('profile:updated', function(changes) {
+
+                var changeProfile = function(changes, _profile) {
                     var deferreds = [];
                     if ('name' in changes) {
-                        profile.set('name', changes['name']);
+                        _profile.set('name', changes['name']);
                     }
                     if ('intro' in changes) {
-                        profile.set('intro', changes['intro']);
+                        _profile.set('intro', changes['intro']);
                     }
                     if('picture' in changes) {
                         var resized = changes['picture'];
@@ -501,15 +561,33 @@ function (Backbone, Marionette, App, FriendAdapter, PostAdapter, State, Permissi
                         deferreds.push(deferred);
                         var picture = DataConvert.dataUriToTypedArray(resized);
                         Dropbox.uploadDropbox("profilePic",  picture['data']).then(Dropbox.shareDropbox).done(function(url) {
-                            console.log("URL", url);
-                            profile.set('pictureUrl', url);
+                            _profile.set('pictureUrl', url);
                             deferred.resolve();
                         });
                     }
                     var publicKey = Encryption.getEncodedKeys().publicKey;
-                    if (publicKey != profile.get("publicKey")) {
-                        profile.set("publicKey", publicKey);
-                    }
+                    profile.set("publicKey", publicKey);
+
+                    return deferreds;
+                }
+
+                profileView.on("profile:create", function(changes) {
+
+                    var deferreds = changeProfile(changes, profile);
+                    $.when.apply($, deferreds).done(function() {
+                        $.when(AppEngine.createProfile(profile)).done(function() {
+                            controller._setupState(profile);
+                            $.when(App.state.fetchAll()).done(function () {
+                                controller.showWall();
+                                App.appRouter.navigate("");
+                            });
+                        });
+                    });
+                });
+
+                profileView.on('profile:updated', function(changes) {
+
+                    var deferreds = changeProfile(changes, profile);
 
                     $.when.apply($, deferreds).done(function() {
                         var profileChanges = profile.changedAttributes();

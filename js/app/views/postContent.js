@@ -9,13 +9,13 @@ define([
     'autolinker',
     'app/app',
     'app/adapters/post',
+    'app/views/fileThumbnail',
+    'app/views/imageThumbnail',
     'utils/misc',
-    'require-text!app/templates/postImage.html',
-    'require-text!app/templates/postFile.html',
     'require-text!app/templates/postContent.html'
-], function($, _, Backbone, Bootsrap, Marionette, CloudGrid, Swipebox, Autolinker, App, PostAdapter, MiscUtils,
-            PostImageTemplate, PostFileTemplate, PostContentTemplate){
-
+], function($, _, Backbone, Bootsrap, Marionette, CloudGrid, Swipebox, Autolinker, App, PostAdapter,
+            FileThumbnailView, ImageThumbnailView,
+            MiscUtils, PostContentTemplate){
 
     var PostContentView = Marionette.ItemView.extend({
 
@@ -56,10 +56,23 @@ define([
 
         initialize: function() {
             this.listenTo(this.model.get("poster"), "change", this.render);
-        },
+            this.listenTo(this.model.get("content"), "add", this.render);
+            this.listenTo(this.model.get("content"), "remove", this.render);
 
-        postFileTemplate: _.template(PostFileTemplate),
-        postImageTemplate: _.template(PostImageTemplate),
+
+            var onResize = function() {
+                var postImagesElement = this.ui.postImages;
+                var postFilesElement = this.ui.postFiles;
+                if (postImagesElement) {
+                    postImagesElement.cloudGrid('reflowContent');
+                }
+                if (postFilesElement) {
+                    postFilesElement.cloudGrid('reflowContent');
+                }
+            }.bind(this);
+            $(window).on('resize', onResize);
+
+        },
 
         onRender: function() {
 
@@ -73,52 +86,63 @@ define([
                 var collection = this.model.get("content");
                 var isFirst = true;
                 collection.each(function (model, index) {
-                    if (model.has("thumbnail")) {
-                        var imageElement = $(this.postImageTemplate(model.attributes));
-                        imageElement.click(function () {
-                            this.showImage(index);
-                        }.bind(this));
+                    if (model.has("thumbnailUrl")) {
 
-                        imageElement.css("background-image", "url(" + model.escape("thumbnail") + ")");
-                        imageElement.css("background-size", "100% auto");
-                        var ratio = model.resizedWidth / model.resizedHeight;
+                        var imageView = new ImageThumbnailView({model: model});
+                        var imageElement = imageView.render().el;
+
                         var cols, rows;
-                        if (ratio > 2) {
-                            cols = 8;
-                            rows = 4;
-                        }
-                        else if (ratio < 1) {
-                            cols = 6;
+
+                        if (!model.has("thumbnail")) {
+                            cols = 10;
                             rows = 8;
                         }
                         else {
-                            cols = 7;
-                            rows = 4;
-                        }
-                        if (collection.length == 1) {
-                            if (ratio >= 1) {
-                                cols = cols * 3;
-                                rows = rows * 3;
+
+                            $(imageElement).click(function () {
+                                this.showImage(index);
+                            }.bind(this));
+
+                            var ratio = model.resizedWidth / model.resizedHeight;
+                            var cols, rows;
+                            if (ratio > 2) {
+                                cols = 8;
+                                rows = 4;
+                            }
+                            else if (ratio < 1) {
+                                cols = 6;
+                                rows = 8;
                             }
                             else {
-                                cols = cols * 2;
-                                rows = rows * 2;
+                                cols = 7;
+                                rows = 4;
                             }
-                        }
-                        else if (isFirst || collection.length == 2) {
-                            if (ratio >= 1) {
-                                cols = cols * 2;
-                                rows = rows * 2;
+                            if (collection.length == 1) {
+                                if (ratio >= 1) {
+                                    cols = cols * 3;
+                                    rows = rows * 3;
+                                }
+                                else {
+                                    cols = cols * 2;
+                                    rows = rows * 2;
+                                }
                             }
-                            isFirst = false;
+                            else if (isFirst || collection.length == 2) {
+                                if (ratio >= 1) {
+                                    cols = cols * 2;
+                                    rows = rows * 2;
+                                }
+                                isFirst = false;
+                            }
                         }
                         $.data(imageElement, 'grid-columns', cols);
                         $.data(imageElement, 'grid-rows', rows);
                         postImagesElement.append(imageElement);
                         imageChildren.push(imageElement);
                     }
-                    if (model.has("filename")) {
-                        var fileElement = $(this.postFileTemplate(model.attributes));
+                    else if (model.has("filename")) {
+                        var fileView = new FileThumbnailView({model: model});
+                        var fileElement = fileView.render().el;
                         fileElement.click(function () {
                             if (!model.has("data")) {
                                 fileElement.find(".downloadImage").addClass("hide");
@@ -132,8 +156,8 @@ define([
                             fileElement.find(".downloadDoneImage").removeClass("hide");
                         });
 
-                        $.data(fileElement, 'grid-columns', 6);
-                        $.data(fileElement, 'grid-rows', 4);
+                        $.data(fileElement, 'grid-columns', 8);
+                        $.data(fileElement, 'grid-rows', 3);
                         postFilesElement.append(fileElement);
                         fileChildren.push(fileElement);
                     }
@@ -152,11 +176,6 @@ define([
                     gridGutter: 3,
                     gridSize: 25
                 });
-
-                $(window).on('resize', function () {
-                    postImagesElement.cloudGrid('reflowContent');
-                    postFilesElement.cloudGrid('reflowContent');
-                })
             }, 0);
         },
 

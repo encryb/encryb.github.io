@@ -149,7 +149,7 @@ define([
             return MiscUtils.isScrollOverflow(e);
         },
 
-        closeChat: function(e) {
+        closeChat: function() {
             this.model.collection.remove(this.model);
         }
     });

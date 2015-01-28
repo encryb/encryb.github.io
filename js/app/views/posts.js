@@ -2,6 +2,7 @@ define([
     'jquery',
     'underscore',
     'backbone',
+    'bootbox',
     'marionette',
     'app/app',
     'app/adapters/post',
@@ -10,7 +11,7 @@ define([
     'app/views/upvotes',
     'require-text!app/templates/post.html'
 
-], function($, _, Backbone, Marionette, App, PostAdapter, CommentsView, PostContentView, UpvotesView, PostTemplate) {
+], function($, _, Backbone, Bootbox, Marionette, App, PostAdapter, CommentsView, PostContentView, UpvotesView, PostTemplate) {
     var PostView = Marionette.LayoutView.extend({
         template: _.template(PostTemplate),
         regions: {
@@ -50,7 +51,8 @@ define([
         },
         events: {
             "click #upvoteButton": "toggleUpvote",
-            "click #deletePost": "deletePost"
+            "click .deletePost": "deletePost",
+            "click .editPost": "editPost"
 
         },
         toggleUpvote: function() {
@@ -63,8 +65,16 @@ define([
         deleteComment: function(commentId) {
             App.vent.trigger("comment:deleted", commentId);
         },
+        editPost: function() {
+            App.vent.trigger("post:edit", this.model);
+        },
         deletePost: function() {
-            App.vent.trigger("post:deleted", this.model);
+            Bootbox.confirm("Delete post?", function(result) {
+                if (result) {
+                    App.vent.trigger("post:deleted", this.model);
+                }
+            }.bind(this));
+
         }
 
     });

@@ -22,11 +22,13 @@
     <div class="col-lg-4 col-sm-5 col-xs-12">
         <div class="well well-sm <% if (!dropboxEnabled) { %> border-warning <% } %> clearfix">
             <div class="row">
-                <div class="col-xs-4 pull-left">
+                <div class="col-xs-4">
                     <span class="glyphicon <% if (dropboxEnabled) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
                 </div>
-                <div class="col-xs-8 pull-right">
-                    <img class="img-responsive" src="img/dropbox.png">
+                <div class="col-xs-8 clearfix">
+                    <div class="pull-right">
+                        <img class="img-responsive" src="img/dropbox.png">
+                    </div>
                 </div>
             </div>
         </div>
@@ -49,12 +51,12 @@
 
 <div class="row top-15 bottom-5 border <% if (!dropboxEnabled && !keysLoaded) { %> hide <% } %>">
     <div class="col-lg-4 col-sm-5 col-xs-12">
-        <div class="well well-sm <% if (!keysLoaded) { %>border-warning<% } %> clearfix">
-            <div class="row">
-                <div class="col-xs-4 pull-left">
+        <div class="well well-sm <% if (!keysLoaded) { %>border-warning<% } %>">
+            <div class="clearfix">
+                <div class="pull-left">
                     <span class="glyphicon <% if (keysLoaded) { %> glyphicon-ok <% } else { %> glyphicon-remove <% } %> status-icon"></span>
                 </div>
-                <div class="col-xs-8 pull-right">
+                <div class="pull-right">
                     <div class="password-icon">
                         <span class="glyphicon glyphicon-asterisk"></span>
                         <span class="glyphicon glyphicon-asterisk"></span>

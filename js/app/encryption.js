@@ -167,18 +167,23 @@ define([
         return ct;
     }
 
-    exports.decryptImageDataAsync = function(password, packedData) {
+    exports.decryptDataAsync = function(password, packedData) {
         var deferred = $.Deferred();
 
         SjclWorker.sym.decrypt(packedData, password, function(error, decrypted) {
-            var blob = new Blob([decrypted.data], {type: decrypted.mimeType});
-            deferred.resolve(WindowUrl.createObjectURL(blob));
+            if (error) {
+                deferred.reject(error.message);
+            }
+            else {
+                var blob = new Blob([decrypted.data], {type: decrypted.mimeType});
+                deferred.resolve(WindowUrl.createObjectURL(blob));
+            }
         });
 
         return deferred.promise();
     }
 
-    exports.decryptTextData = function(packedData, password) {
+    exports.decryptText = function(packedData, password) {
         var data = Encoding.decode(packedData);
         var ct = decrypt(data, password);
         var decrypted = Sjcl.codec.utf8String.fromBits(ct);
@@ -187,10 +192,15 @@ define([
     }
 
     // $TODO, still sync for now
-    exports.decryptTextDataAsync = function(password, packedData) {
+    exports.decryptTextAsync = function(password, packedData) {
         var deferred = $.Deferred();
-        var decrypted = exports.decryptTextData(packedData, password);
-        deferred.resolve(decrypted);
+        try {
+            var decrypted = exports.decryptText(packedData, password);
+            deferred.resolve(decrypted);
+        }
+        catch(e) {
+            deferred.reject(e.message);
+        }
         return deferred.promise();
     }
 

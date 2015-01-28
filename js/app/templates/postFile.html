@@ -1,13 +1,31 @@
-<div class="gridItem pointer-hand border-file">
-    <div class="clearfix">
-        <div class="pull-left" >
+<div class="row <% if (typeof removable === 'undefined') { %> pointer-hand <% } %>">
+    <% if (typeof removable === "undefined") { %>
+
+    <div class="col-xs-2">
+        <div>
             <img class="downloadImage" src="img/download.png">
             <img class="downloadLoadingImage hide" style="width: 32px; height: 32px" src="img/loading.gif">
             <img class="downloadDoneImage hide" src="img/downloaded.png">
         </div>
-        <div class="small pull-right">Size: 5.3M</div>
+        <div class="small padding-5" >Size: 5.3M</div>
     </div>
-    <div class="text-center word-wrap" style="font-size: 16px; position: relative; top: 30%; transform: translateY(-50%);">
-        <%- filename %>
+    <% } %>
+
+    <div class="col-xs-10 flex-center" style="height: 100%">
+        <div class="word-wrap text-center">
+            <span class="filename <% if (typeof deleted !== 'undefined') { %> strike <% } %>">
+                <%- filename %>
+            </span>
+        </div>
     </div>
+    <% if (typeof removable !== "undefined") { %>
+    <div class="col-xs-2 clearfix">
+        <% if (typeof deleted !== "undefined") { %>
+            <span class="restoreFile pull-right remove-icon-black glyphicon glyphicon-repeat"></span>
+        <% } else { %>
+            <span class="removeFile pull-right remove-icon-black glyphicon glyphicon-trash"></span>
+        <% } %>
+    </div>
+    <% } %>
+
 </div>

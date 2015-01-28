@@ -26,7 +26,7 @@ define([
             var encryptedArray = json["_enc_"];
 
             try {
-                var modelString = Encryption.decryptTextData(encryptedArray.buffer, Encryption.getKeys().databaseKey);
+                var modelString = Encryption.decryptText(encryptedArray.buffer, Encryption.getKeys().databaseKey);
                 var decryptedJson = JSON.parse(modelString);
                 if (json.hasOwnProperty("id")) {
                     decryptedJson["id"] = json["id"];

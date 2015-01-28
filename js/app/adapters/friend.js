@@ -6,9 +6,9 @@ define([
     'app/encryption',
     'app/services/dropbox',
     'app/remoteManifest',
-    'utils/random'
+    'utils/misc'
 ],
-function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, RandomUtil) {
+function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, MiscUtils) {
 
     var FriendAdapter = {
 
@@ -26,7 +26,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
             var friendAdapter = this;
             var deferred = $.Deferred();
 
-            var manifestFile = "manifests" + "/" + RandomUtil.makeId();
+            var manifestFile = "manifests" + "/" + MiscUtils.makeId();
             var attrs = {
                 userId: inviteModel.get("userId"),
                 name: inviteModel.get('name'),
@@ -114,7 +114,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
             //send trigger to controller to open a chat window if need be
             App.vent.trigger("chat:received", friend);
             var textBuffer = chatLine.get("text").buffer;
-            var text = Encryption.decryptTextData(textBuffer, Encryption.getKeys().secretKey);
+            var text = Encryption.decryptText(textBuffer, Encryption.getKeys().secretKey);
             var collection = App.state.chats[friend.get("userId")];
             var lastChat = collection.last();
 
@@ -282,7 +282,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
                         pictureUrl: profile.get('pictureUrl'),
                         publicKey: Encryption.getEncodedKeys().publicKey,
                         lastUpdated: new Date().getTime()
-                    }
+                    };
 
                     if(!notifyModel.get("manifestUrl")) {
                         friendAdapter.saveManifest(friend).then(Dropbox.shareDropbox).done(function(url){
@@ -327,7 +327,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
 
         saveManifests: function() {
             App.state.myFriends.each(function(friend) {
-                setTimeout(function() { FriendAdapter.saveManifest(friend); }, 0); ;
+                setTimeout(function() { FriendAdapter.saveManifest(friend); }, 0);
             });
         },
 
@@ -358,7 +358,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
 
             Dropbox.downloadUrl(friendsManifest).done(function (data) {
 
-                var decryptedData = Encryption.decryptTextData(data, Encryption.getKeys().secretKey);
+                var decryptedData = Encryption.decryptText(data, Encryption.getKeys().secretKey);
                 var manifest = JSON.parse(decryptedData);
 
                 friendAdapter.updateCollection(friend, manifest);
@@ -419,25 +419,26 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Ran
                 });
             }
             else {
+                var i;
                 this.manifestCache[friendId] = manifest;
-                for (var i=0; i < manifest.posts.length; i++) {
+                for (i=0; i < manifest.posts.length; i++) {
                     var post = manifest.posts[i];
                     state.addFriendsPost(post, friend);
                 }
                 if (manifest.hasOwnProperty('upvotes')) {
-                    for (var i=0; i< manifest.upvotes.length; i++) {
+                    for (i=0; i< manifest.upvotes.length; i++) {
                         var upvote = manifest.upvotes[i];
                         state.addFriendsUpvote(upvote, friend);
                     }
                 }
                 if (manifest.hasOwnProperty('comments')) {
-                    for (var i=0; i< manifest.comments.length; i++) {
+                    for (i=0; i< manifest.comments.length; i++) {
                         var comment = manifest.comments[i];
                         state.addFriendsComment(comment, friend);
                     }
                 }
                 if (manifest.hasOwnProperty('friends')) {
-                    for (var i=0; i< manifest.friends.length; i++) {
+                    for (i=0; i< manifest.friends.length; i++) {
                         var friendOfFriend = manifest.friends[i];
                         state.addFriendOfFriend(friendOfFriend, friend);
                     }

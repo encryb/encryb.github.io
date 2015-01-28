@@ -10,11 +10,10 @@ define([
     'app/collections/persist/upvotes',
     'app/collections/persist/invites',
     'app/models/postWrapper',
-    'app/models/post',
-    'app/services/dropbox'
+    'app/models/post'
 ], function(Backbone, Marionette, _, FilteredCollection, App,
             PostColl, FriendColl,  CommentColl, UpvoteColl, InviteColl,
-            PostWrapper, Post, Dropbox) {
+            PostWrapper, Post) {
 
     var State = Marionette.Object.extend({
 
@@ -31,8 +30,8 @@ define([
             this.listenTo(profile, "change:name", function(model){
                 this.myModel.set("name", model.get("name"));
             });
-            this.listenTo(profile,"change:profileUrl", function(model){
-                this.myModel.set("profileUrl", model.get("profileUrl"));
+            this.listenTo(profile,"change:pictureUrl", function(model){
+                this.myModel.set("pictureUrl", model.get("pictureUrl"));
             });
 
             this.myPosts = new PostColl();
@@ -96,7 +95,6 @@ define([
                 state.myFriends.fetch(),
                 state.myInvites.fetch()
             ).done(function() {
-                console.log("friends", state.myFriends);
                 deferred.resolve(state);
             });
             return this.fetchPromise;
@@ -120,12 +118,14 @@ define([
             wrapper.setMyPost(post, this.myModel);
             this.posts.add(wrapper);
             var postComments = this.comments.where({postId: wrapper.get("postId")});
-            for (var i=0; i<postComments.length; i++) {
+
+            var i;
+            for (i=0; i<postComments.length; i++) {
                 var comment = postComments[i];
                 wrapper.addComment(comment);
             }
             var postUpvotes = this.upvotes.where({postId: wrapper.get("postId")});
-            for (var i=0; i<postUpvotes.length; i++) {
+            for (i=0; i<postUpvotes.length; i++) {
                 var upvote = postUpvotes[i];
                 if (upvote.get("myUpvote")) {
                     wrapper.addMyUpvote();
@@ -165,18 +165,19 @@ define([
         addFriendsPost: function(post, friend) {
             var wrapper = new PostWrapper();
 
-            var postModel = new Post(post, {parse: true});
+            var postModel = new Post(post);
 
             wrapper.setFriendsPost(postModel, friend);
             this.posts.add(wrapper);
             var postComments = this.comments.where({postId: wrapper.get("postId")});
-            for (var i=0; i<postComments.length; i++) {
-                var comment = postComments[i];
+
+            for (var ci=0; ci<postComments.length; ci++) {
+                var comment = postComments[ci];
                 wrapper.addComment(comment);
             }
             var postUpvotes = this.upvotes.where({postId: wrapper.get("postId")});
-            for (var i=0; i<postUpvotes.length; i++) {
-                var upvote = postUpvotes[i];
+            for (var pi=0; pi<postUpvotes.length; pi++) {
+                var upvote = postUpvotes[pi];
                 if (upvote.get("myUpvote")) {
                     wrapper.addMyUpvote();
                 }

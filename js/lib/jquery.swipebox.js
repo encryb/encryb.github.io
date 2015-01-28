@@ -87,7 +87,6 @@
 					
 					elements = [];
 					var index , relType, relVal;
-
 					// Allow for HTML5 compliant attribute before legacy use of rel
 					if ( ! relVal ) {
 						relType = 'data-rel';
@@ -696,9 +695,14 @@
 
 
 				if ($.isFunction(src.done)) {
-					$.when(src).done(function(media) {
-						_openMedia(media);
-					});
+					$.when(src)
+						.done(function(media) {
+							_openMedia(media);
+						})
+						.fail(function(error){
+							slide.removeClass('slide-loading');
+							slide.html("<div class='swipebox-warning'>" + error + "</div");
+						});
 				}
 				else {
 					_openMedia(src);

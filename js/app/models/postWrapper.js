@@ -2,6 +2,23 @@ define([
     'backbone'
 ], function (Backbone) {
 
+
+    var contentJsonToCollection = function(contentArray){
+        var collection = new Backbone.Collection();
+
+        for (var i=0; i<contentArray.length; i++) {
+            var contentAttributes = contentArray[i];
+            // $LEGACY
+            if (typeof contentAttributes === "string") {
+                contentAttributes = JSON.parse(contentAttributes);
+            }
+            var model = new Backbone.Model(contentAttributes);
+            collection.add(model);
+        }
+        return collection;
+    };
+
+
     var PostWrapper = Backbone.Model.extend({
 
         defaults: {
@@ -62,8 +79,17 @@ define([
 
         setMyPost: function(postModel, myInfo) {
             this.postModel = postModel;
-
             var attr = _.extend(_.clone(postModel.attributes), {poster: myInfo, myPost: true});
+            // caching for newly created posts, content includes downloaded assets
+            if (postModel.hasOwnProperty("contentList")) {
+                attr["content"] = new Backbone.Collection(postModel["contentList"]);
+            }
+            else if (attr.hasOwnProperty("content")) {
+                attr["content"] = contentJsonToCollection(attr["content"]);
+            }
+            else {
+                attr["content"] = new Backbone.Collection();
+            }
             var model = new Backbone.Model(attr);
             this.set("post", model);
             var userId = myInfo.get("userId");
@@ -73,10 +99,45 @@ define([
 
         setFriendsPost: function(postModel, friend) {
             var attr = _.extend(_.clone(postModel.attributes), {poster: friend, myPost: false});
+            if (attr.hasOwnProperty("content")) {
+                attr["content"] = contentJsonToCollection(attr["content"]);
+            }
+            else {
+                attr["content"] = new Backbone.Collection();
+            }
             var model = new Backbone.Model(attr);
             this.set("post", model);
             this.setPostId(friend.get("userId"), postModel.get("id"));
             this.set('userId', friend.get("userId"));
+        },
+
+        updateDisplayModel: function(meta, addContent, removeContent) {
+            var displayModel = this.get("post");
+
+            if (typeof addContent !== "undefined" && addContent.length > 0) {
+                var contentModels = [];
+                for (var i=0; i<addContent.length; i++) {
+                    var model = new Backbone.Model(addContent[i]);
+                    contentModels.push(model);
+                }
+                if (displayModel.has("content")) {
+                    displayModel.get("content").add(contentModels);
+                }
+                else {
+                    var contentCollection = new Backbone.Collection(contentModels);
+                    displayModel.set("content", contentCollection);
+                }
+            }
+            if (typeof removeContent !== "undefined" && removeContent.length > 0) {
+                if (displayModel.has("content")) {
+                    var contentCollection = displayModel.get("content");
+                    contentCollection.remove(removeContent);
+                }
+                else {
+                    console.error("Removing from non existing content collection");
+                }
+            }
+            displayModel.set(meta);
         },
 
         deletePost: function() {

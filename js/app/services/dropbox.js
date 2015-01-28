@@ -38,7 +38,7 @@ exports.createFolder = function(path) {
     });
     return deferred;
 };
-
+    
 exports.remove = function(path) {
     var deferred = $.Deferred();
     dropboxClient.remove(path, function (error, stats) {
@@ -52,13 +52,14 @@ exports.remove = function(path) {
     return deferred;
 };
 
+
 exports.exists = function(path) {
     var deferred = $.Deferred();
     dropboxClient.stat(path, {}, function (error, data, stats) {
         if (error) {
             deferred.fail();
         } else {
-            deferred.resolve(path);
+            deferred.resolve(stats);
         }
     });
     return deferred;
@@ -130,11 +131,16 @@ exports.downloadUrl = function(downloadUrl) {
     xhr.open('GET', downloadUrl);
     xhr.responseType = 'arraybuffer';
     xhr.onload = function() {
-        var encryptedData = xhr.response;
-        deferred.resolve(encryptedData);
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                deferred.resolve(xhr.response);
+            } else {
+                deferred.reject(xhr.statusText);
+            }
+        }
     };
     xhr.onerror = function() {
-        deferred.fail();
+        deferred.reject(xhr.statusText);
     };
     xhr.send();
 

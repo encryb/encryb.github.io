@@ -214,6 +214,24 @@ ul.collection-list li {
     cursor: hand;
 }
 
+.remove-icon {
+    font-size: 1.5rem;
+    cursor: pointer;
+    cursor: hand;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px;
+    margin: 2px;
+}
+
+.remove-icon-black {
+    font-size: 1.5rem;
+    cursor: pointer;
+    cursor: hand;
+    color: #000000;
+    padding: 5px;
+}
+
 .password-icon {
     border: 2px solid #ddd;
     border-radius: 10px;
@@ -365,7 +383,7 @@ ul.collection-list li {
 .gridItem {
     border-radius: 3px;
     box-sizing: border-box;
-    padding: 5px;
+    padding: 3px;
     position: absolute;
 }
 
@@ -390,8 +408,16 @@ ul.collection-list li {
     max-height: 50%;
 }
 
+.picture-error {
+    text-align: center;
+    position: absolute;
+    color: darkred;
+    font-size: 1.6rem;
+    padding: 0.5rem;
+    font-weight: bold;
+}
+
 .border-file {
-    background-color: #fcfcfc;
     border: 2px solid #909090;
 }
 
@@ -422,4 +448,31 @@ ul.collection-list li {
     padding: 0.5rem;
     background-color: rgba(0, 0, 0, 0.5);
 
+}
+
+.swipebox-warning {
+    color: #ff0000;
+    font-size: 2rem;
+    padding: 3rem;
+    background-color: #f5f5f5;
+}
+
+.bottom-left {
+    position:absolute;
+    bottom: 0px;
+    left: 0px;
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.filename {
+    font-size: 16px;
+}
+
+.strike {
+    text-decoration: line-through;
 }

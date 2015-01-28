@@ -111,11 +111,11 @@ function ($, Backbone, Marionette, App, Encryption) {
             return deferred;
         },
 
-        createProfile: function(profile, userId) {
+        createProfile: function(profile) {
             var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
 
-                var args = { userId: userId,
+                var args = {
                     name: profile.get('name'),
                     intro: profile.get('intro'),
                     pictureUrl: profile.get('pictureUrl'),

@@ -1,0 +1,51 @@
+<div class="row">
+    <div class="col-xs-12">
+        <form id="editPostForm" class="form-horizontal" role="form">
+            <div class="form-group">
+                <div class="col-xs-12">
+                    <textarea id="editPostText" class="form-control" rows="5" autofocus><% if (typeof text !== "undefined") { %><%- text %><% } %></textarea>
+                </div>
+            </div>
+            <!--
+            <div class="form-group">
+                <div class="col-xs-12">
+                    <div class="dropzone dz-clickable">
+                        <div class="dz-default dz-message"><span><big>Click or drop to add images</big></span></div>
+                    </div>
+                </div>
+            </div>
+            -->
+            <div class="form-group">
+                <div class="col-xs-12">
+                    <div class="editImages relative-pos"></div>
+                </div>
+                <div class="col-xs-12">
+                    <div class="editFiles relative-pos"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-xs-12 dropzoneRegion">
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <label class="col-xs-2 control-label text-left">Share with:</label>
+                <div class="col-xs-10">
+                    <select class="form-control" id="permissions" multiple></select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-xs-12">
+                    <img class="loading-img hide" src="img/loading.gif">
+                </div>
+                <div class="btn-group col-xs-12">
+                    <button id="postEditButton" type="submit" class="btn btn-primary">Submit</button>
+                    <button id="postEditCancelButton" type="button" class="btn btn-default">Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

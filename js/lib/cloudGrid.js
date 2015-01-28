@@ -144,6 +144,7 @@
 
         var containerWidth = this.options.$container.width();
         var columnCount = Math.floor(containerWidth / (this.options.gridSize + this.options.gridGutter));
+        columnCount = Math.max(columnCount, 1);
         this.options.$container.css({
             width: columnCount * (this.options.gridSize + this.options.gridGutter) - this.options.gridGutter
         });

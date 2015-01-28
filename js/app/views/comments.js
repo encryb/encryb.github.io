@@ -19,14 +19,21 @@ define([
         className: "comment",
 
         events: {
-            "click #deleteComment": "deleteComment"
+            "click .deleteComment": "deleteComment",
+            "click .quoteComment": "quoteComment"
         },
 
 
         deleteComment: function(event) {
             event.preventDefault();
             this.trigger("comment:delete");
+        },
+
+        quoteComment: function(event) {
+            event.preventDefault();
+            this.trigger("comment:quote");
         }
+
     });
 
     var CommentsView = Marionette.CompositeView.extend({
@@ -58,6 +65,11 @@ define([
             createCommentDiv: '#createCommentDiv',
             expandComments: '#expandComments'
         },
+
+        initialize: function() {
+            this.on("childview:comment:quote", this.commentQuote);
+        },
+
         checkForCollapse: function() {
             var text = this.ui.createCommentText.val();
             if (!text || text.length === 0) {
@@ -78,6 +90,13 @@ define([
             this.model.set("expanded", true);
             this.render();
             return false;
+        },
+        commentQuote: function(child) {
+            this.expandCommentForm();
+            var model = child.model;
+            var commenterName = model.get("commenter").escape("name");
+            var comment = model.get("text");
+            this.ui.createCommentText.val("> " + commenterName + ": " + comment + "\n");
         },
         createComment: function() {
             event.preventDefault();

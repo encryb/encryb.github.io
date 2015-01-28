@@ -33,15 +33,12 @@ function (Sjcl, Encoding, SjclConvert) {
 			Sjcl.random.addEntropy(event.data.randomNumber, event.data.entropy, "adding entropy");
 			return "entropy";
 		}
-		try {
-			if (event.data.encrypt) {
-				return encrypt(event.data.content, event.data.mimeType, event.data.password);
-			} else if (event.data.decrypt) {
-				return decrypt(event.data.encryptedContent, event.data.password);
-			}
-			return false;
-		} catch (e) {
-			return false;
+
+		if (event.data.encrypt) {
+			return encrypt(event.data.content, event.data.mimeType, event.data.password);
+		} else if (event.data.decrypt) {
+			return decrypt(event.data.encryptedContent, event.data.password);
 		}
+		return false;
 	};
 });
