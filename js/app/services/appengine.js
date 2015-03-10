@@ -2,10 +2,9 @@ define([
     'jquery',
     'backbone',
     'marionette',
-    'app/app',
-    'app/encryption'
+    'app/app'
 ],
-function ($, Backbone, Marionette, App, Encryption) {
+function ($, Backbone, Marionette, App) {
 
     var AppEngineService = {
 
@@ -26,13 +25,15 @@ function ($, Backbone, Marionette, App, Encryption) {
         invite: function(friendModel) {
             var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
-                AppEngine.invite({id: App.getP,
+                AppEngine.invite({
+                    id: App.state.myId,
+                    password: App.state.myPassword,
                     inviteeId: friendModel.get("userId"),
                     datastoreId: friendModel.get("myDatastoreId")}
                 ).execute(function (resp) {
                     if (resp.error) {
-                        console.log("ERROR", resp);
-                        deferred.reject();
+                        console.log("invite error", resp);
+                        deferred.reject(resp.error);
                         return;
                     }
                     deferred.resolve();
@@ -43,24 +44,34 @@ function ($, Backbone, Marionette, App, Encryption) {
         },
 
         acceptInvite: function (friendModel) {
-
+            var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
-                AppEngine.acceptInvite({id: App.state.myId,
-                        inviterId: friendModel.get("userId"),
-                        datastoreId: friendModel.get("myDatastoreId")}
-                ).execute(function (resp) {});
+                AppEngine.acceptInvite({
+                    id: App.state.myId,
+                    password: App.state.myPassword,
+                    inviterId: friendModel.get("userId"),
+                    datastoreId: friendModel.get("myDatastoreId")}
+                ).execute(function (resp) {
+                    if (resp.error) {
+                        console.log("accept invite error", resp);
+                        deferred.reject(resp.error);
+                        return;
+                    }
+                    deferred.resolve();
+                });
             });
+            return deferred.promise();
         },
-
 
         getInvites: function () {
             var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
-                var args = {id: App.state.myId};
+                var args = {id: App.state.myId, password: App.state.myPassword};
                 AppEngine.getInvites(args).execute(function (resp) {
 
                     if (resp.error) {
-                        deferred.reject();
+                        console.log("getInvites error", resp);
+                        deferred.reject(resp.error);
                         return;
                     }
                     if (!resp.items) {
@@ -73,8 +84,8 @@ function ($, Backbone, Marionette, App, Encryption) {
                     for (var i = 0; i < resp.items.length; i++) {
                         var inviteEntity = resp.items[i];
 
-                        AppEngine.inviteReceived({id: inviteEntity.userId, inviteeId: App.state.myId}).execute(function (resp) {
-                        });
+                        AppEngine.inviteReceived({ id: inviteEntity.userId, password: App.state.myPassword, inviteeId: App.state.myId })
+                            .execute(function (resp) {});
                     }
 
                 });
@@ -82,16 +93,17 @@ function ($, Backbone, Marionette, App, Encryption) {
             return deferred;
         },
 
-        getAccepts: function (myUserId) {
+        getAccepts: function () {
 
             var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
 
-                var args = {id: myUserId};
+                var args = {id: App.state.myId, password: App.state.myPassword};
                 AppEngine.getAccepts(args).execute(function (resp) {
 
                     if (resp.error) {
-                        deferred.reject();
+                        console.log("getAccepts error", resp);
+                        deferred.reject(resp.error);
                     }
 
                     if (!resp.items) {
@@ -123,7 +135,12 @@ function ($, Backbone, Marionette, App, Encryption) {
                 };
                 console.log("Calling create profile", args);
                 AppEngine.createProfile(args).execute(function (resp) {
-                    // TODO: error checking please
+                    if (resp.error) {
+                        console.log("createProfile error", resp);
+                        deferred.reject(resp.error);
+                        return;
+                    }
+
                     console.log("Profile created", resp);
                     profile.set("userId", resp.userId);
                     profile.set("password", resp.password);
@@ -134,21 +151,28 @@ function ($, Backbone, Marionette, App, Encryption) {
             return deferred.promise();
         },
 
-        publishProfile: function (myUserId, profile) {
+        publishProfile: function (profile) {
+            var deferred = $.Deferred();
             require(["appengine!encrybuser"], function (AppEngine) {
 
-                var args = {id: App.state.myId,
+                var args = {
+                    id: App.state.myId,
+                    password: App.state.myPassword,
                     name: profile.get('name'),
                     intro: profile.get('intro'),
                     pictureUrl: profile.get('pictureUrl'),
                     publicKey: profile.get('publicKey')
                 };
-                console.log("Calling set profile", args);
                 AppEngine.setProfile(args).execute(function (resp) {
-                    profile.set("shared", true);
-                    profile.save();
+                    if (resp.error) {
+                        console.log("publishProfile error", resp);
+                        deferred.reject(resp.error);
+                        return;
+                    }
+                    deferred.resolve();
                 });
             });
+            return deferred.promise();
         }
     };
     return AppEngineService;

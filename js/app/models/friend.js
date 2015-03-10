@@ -14,7 +14,7 @@ define([
         },
 
         toJSON: function(options) {
-            return _.omit(this.attributes, 'score');
+            return _.omit(this.attributes, "score", "error");
         }
 
     });

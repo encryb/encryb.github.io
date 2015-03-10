@@ -4,11 +4,17 @@ define(function() {
 
     var ImageUtil = {
 
-        getNaturalSize: function(img) {
+        getNaturalSize: function(src) {
+            var deferred = $.Deferred();
             var image = new Image();
-            image.src = $(img).attr("src");
-            return { width: image.naturalWidth,
-                     height: image.naturalHeight};
+            image.onload = function() {
+                deferred.resolve({
+                    width: image.naturalWidth,
+                    height: image.naturalHeight
+                });
+            };
+            image.src = src;
+            return deferred;
         },
 
         cropAndResize: function(image, maxWidth, maxHeight, cropX, cropY, cropWidth, cropHeight) {

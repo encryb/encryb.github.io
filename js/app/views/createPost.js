@@ -98,17 +98,22 @@ define([
                 var creationDeferred = $.Deferred();
                 App.vent.trigger("post:created", post, contentList, creationDeferred);
 
-                $.when(creationDeferred).done(function () {
-                    createPostView.ui.newPostForm.trigger('reset');
-                    createPostView.ui.newPostDiv.removeClass("in");
-                    createPostView.ui.newPostTrigger.show();
+                $.when(creationDeferred)
+                    .fail(function () {
+                        createPostView.ui.postSubmitButton.removeClass("hide");
+                        createPostView.ui.loadingImage.addClass("hide");
+                    })
+                    .done(function () {
+                        createPostView.ui.newPostForm.trigger('reset');
+                        createPostView.ui.newPostDiv.removeClass("in");
+                        createPostView.ui.newPostTrigger.show();
 
-                    createPostView.ui.postSubmitButton.removeClass("hide");
-                    createPostView.ui.loadingImage.addClass("hide");
+                        createPostView.ui.postSubmitButton.removeClass("hide");
+                        createPostView.ui.loadingImage.addClass("hide");
 
-                    createPostView.dropzoneView.dropzone.removeAllFiles();
+                        createPostView.dropzoneView.dropzone.removeAllFiles();
 
-                    selectize.clear();
+                        selectize.clear();
                 });
             });
         },

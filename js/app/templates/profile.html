@@ -12,7 +12,6 @@
     <div class="col-lg-6 col-md-7 col-sm-10 col-xs-12">
         <div class="">
             <form class="form" id="profileForm">
-
                 <div class="row">
                     <div class="col-xs-12 col-sm-10">
                         <div class="form-group top-15">
@@ -91,7 +90,7 @@
 <div class="row top-15">
     <div class="col-xs-12">
         <img class="loading-img hide" src="img/loading.gif">
-        <button id="createAccount" class="btn btn-primary btn-lg">
+        <button id="createButton" class="btn btn-primary btn-lg">
             Create Encryb Account
         </button>
     </div>
@@ -99,7 +98,9 @@
 <% } else { %>
 <div class="row top-15">
     <div class="col-lg-9 col-md-11 col-xs-12">
+        <img class="loading-img hide" src="img/loading.gif">
         <button id="updateButton" class="btn btn-success btn-lg <% if (profile.get('name').length == 0) { print('disabled'); } %>">Update</button>
+        <button id="cancelButton" class="btn btn-warning btn-lg">Cancel</button>
     </div>
 </div>
 <% }%>

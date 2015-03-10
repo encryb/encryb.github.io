@@ -13,11 +13,14 @@
                 </div>
             </div>
         </div>
-        <div class="pull-right">
-            <% if (invite == false) { %>
-                <span id="chatButton" class="glyphicon glyphicon-comment pointer-hand"></span>
-            <% } %>
-        </div>
+        <% if (invite == false) { %>
+        <div id="chatButton" class="pull-right padding-2 glyphicon glyphicon-comment pointer-hand"></div>
+        <% } %>
+        <% if (typeof error !== "undefined") { %>
+            <div data-toggle="tooltip" data-placement="bottom" title="<%- error %>" style="color: #ff2222" 
+                 class="pull-right padding-2 glyphicon glyphicon-warning-sign pointer-hand"></div>
+        <% } %>
+
     </div>
     <% if (invite == true) { %>
         <div class="alert-sm alert-warning">Invited</div>

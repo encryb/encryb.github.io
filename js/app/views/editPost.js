@@ -10,8 +10,8 @@ define([
     'app/app',
     'app/adapters/post',
     'app/models/post',
-    'app/views/fileThumbnail',
-    'app/views/imageThumbnail',
+    'app/views/elements/fileThumbnail',
+    'app/views/elements/imageThumbnail',
     'app/views/elements/dropzone',
     'compat/windowUrl',
     'utils/image',
@@ -28,7 +28,6 @@ define([
         },
 
         initialize: function() {
-            console.log("this.model", this.model);
             this.listenTo(this.options.permissions, "add", this.permissionAdded);
             this.listenTo(this.options.permissions, "remove", this.permissionRemoved);
         },

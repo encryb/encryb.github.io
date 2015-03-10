@@ -14,7 +14,13 @@ define([
 
     var FriendOfFriendView = Marionette.ItemView.extend({
         template: _.template(FriendOfFriendTemplate),
-        className: "pull-left margin-right-15"
+        className: "pull-left margin-right-10",
+        events: {
+            "click .friend" : "clickFriend"
+        },
+        clickFriend: function() {
+            App.vent.trigger("invite:find", this.model.escape("userId"));
+        }
     });
 
     var CommonFriendsView = Marionette.CompositeView.extend({

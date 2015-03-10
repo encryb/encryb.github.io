@@ -3,12 +3,9 @@ define([
     'underscore',
     'backbone',
     'marionette',
-    'visibility',
     'app/app',
     'require-text!app/templates/wall.html'
-], function($, _, Backbone, Marionette, Visibility, App,
-            WallTemplate
-    ){
+], function($, _, Backbone, Marionette, App, WallTemplate){
 
     var AppView = Marionette.LayoutView.extend({
         template: _.template( WallTemplate ),

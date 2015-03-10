@@ -66,6 +66,7 @@ ul.collection-list li {
     border: 1px solid #DDD;
     border-radius: 4px;
     background: #F5F5F5;
+    min-height: 220px;
 }
 
 .fileinput {
@@ -153,9 +154,11 @@ ul.collection-list li {
 .padding-5 {
     padding: 5px;
 }
-
-.margin-right-15 {
-    margin-right: 15px;
+.padding-2 {
+    padding: 2px;
+}
+.margin-right-10 {
+    margin-right: 10px;
 }
 
 .margin-right-5 {

@@ -119,7 +119,6 @@ define([
             "remove": "render"
         },
         _initialEvents: function() {
-
         },
         showCollection: function() {
             var ChildView;

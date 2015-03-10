@@ -55,6 +55,20 @@ define([
             return true;
         },
 
+        isElementVisible: function($elem, margin) {
+            var $window = $(window);
+
+            var viewTop = $window.scrollTop() - margin;
+            var viewBottom = viewTop + $window.height() + margin;
+
+            var elemTop = $elem.offset().top;
+            var elemBottom = elemTop + $elem.height();
+
+            return ((elemTop >= viewTop) && (elemTop <= viewBottom))
+                || ((elemBottom >= viewTop) && (elemBottom <= viewBottom))
+           
+        },
+
         sendNotification: function (title, text, icon) {
 
             var deferred = $.Deferred();

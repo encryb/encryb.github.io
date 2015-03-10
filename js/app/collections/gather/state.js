@@ -2,7 +2,6 @@ define([
     'backbone',
     'marionette',
     'underscore',
-    'backbone-filtered-collection',
     'app/app',
     'app/collections/persist/posts',
     'app/collections/persist/friends',
@@ -11,7 +10,7 @@ define([
     'app/collections/persist/invites',
     'app/models/postWrapper',
     'app/models/post'
-], function(Backbone, Marionette, _, FilteredCollection, App,
+], function(Backbone, Marionette, _, App,
             PostColl, FriendColl,  CommentColl, UpvoteColl, InviteColl,
             PostWrapper, Post) {
 
@@ -26,6 +25,7 @@ define([
             this.myModel.set("userId", profile.get("userId"));
 
             this.myId = profile.get("userId");
+            this.myPassword = profile.get("password");
 
             this.listenTo(profile, "change:name", function(model){
                 this.myModel.set("name", model.get("name"));
@@ -44,9 +44,6 @@ define([
             this.posts.comparator = function(post) {
                 return -post.get('post').get('created');
             };
-
-            this.filteredPosts = new FilteredCollection (null, {collection: this.posts});
-
 
             this.comments = new Backbone.Collection();
             this.listenTo(this.comments, "add", this.dispatchCommentAdd);
@@ -70,12 +67,6 @@ define([
             this.myUpvotes.on("add", this.onMyUpvoteAdded.bind(this));
             this.myUpvotes.on("remove", this.onMyUpvoteRemoved.bind(this));
 
-            App.vent.on("friend:selected", function(friendModel){
-                App.state.filterByUser(friendModel.get('userId'));
-            });
-            App.vent.on("friend:unselect", function(){
-               App.state.unsetFilter();
-            });
         },
 
         fetchAll: function() {
@@ -101,19 +92,6 @@ define([
         },
 
         onMyPostAdded: function(post) {
-            // if post was just created, it might not have id (assigned by the datastore)
-            // in that case, save the post first.
-            if (post.has("id")){
-                return this._onMyPostAdded(post);
-            }
-            var onSuccess = function(){
-                this._onMyPostAdded(post);
-            }.bind(this);
-
-            post.save(null, {wait:true, success: onSuccess});
-
-        },
-        _onMyPostAdded: function(post) {
             var wrapper = new PostWrapper();
             wrapper.setMyPost(post, this.myModel);
             this.posts.add(wrapper);
@@ -142,13 +120,12 @@ define([
             this.posts.remove(model);
         },
         onMyCommentAdded: function(comment) {
-
             var attr = _.extend(_.clone(comment.attributes), {commenter: this.myModel, myComment: true});
             var model = new Backbone.Model(attr);
             this.comments.add(model);
         },
         onMyCommentRemoved: function(comment) {
-            var model = this.comments.findWhere({postId: comment.get("postId"), commenter: this.myModel});
+            var model = this.comments.findWhere({id: comment.get("id"), commenter: this.myModel});
             this.comments.remove(model);
         },
         onMyUpvoteAdded: function(upvote) {
@@ -157,7 +134,7 @@ define([
             this.upvotes.add(model);
         },
         onMyUpvoteRemoved: function(upvote) {
-            var model = this.upvotes.findWhere({postId: upvote.get("postId")});
+            var model = this.upvotes.findWhere({postId: upvote.get("postId"), myUpvote: true});
             this.upvotes.remove(model);
         },
 
@@ -206,10 +183,12 @@ define([
             var model = new Backbone.Model();
             model.set("postId", upvote.postId);
             model.set("friend", friend);
+            model.set("ownerId", friend.get("userId"));
             this.upvotes.add(model);
         },
         removeFriendsUpvote: function(post, friend) {
-            var model = this.upvotes.findWhere({id: post.id, owenerId: friend.get('userId')});
+            console.log("Removing", post, friend.get("userId"));
+            var model = this.upvotes.findWhere({postId: post.postId, ownerId: friend.get("userId")});
             this.upvotes.remove(model);
         },
 
@@ -296,10 +275,11 @@ define([
                 post.removeMyUpvote();
             }
             else {
-                post.removeFriendsUpvote(upvote.get('userId'));
+                post.removeFriendsUpvote(upvote.get("ownerId"));
             }
             this.updateScore(upvote, -1);
         },
+
         updateScore: function(upvote, value) {
 
             var postId = upvote.get("postId");
@@ -323,12 +303,30 @@ define([
             friend.set("score", friend.get("score") + value);
         },
 
-
         filterByUser: function(userId) {
-            this.filteredPosts.setFilter(function(post) { return post.get('userId') == userId});
+            this.filteredPosts.setFilter(function(post) { return post.get('userId') == userId });
         },
         unsetFilter: function() {
             this.filteredPosts.setFilter(false);
+        },
+
+        toManifest: function(friend) {
+            var manifest = {
+                posts: this.myPosts.toManifest(friend),
+                upvotes: this.myUpvotes.toJSON(),
+                comments: this.myComments.toJSON(),
+                friends: this.myFriends.toManifest(friend)
+            }
+            return {manifest: manifest, archive: null};
+        },
+        createMyPost: function(postModel){
+            var deferred = $.Deferred();
+            var onSuccess = function() {
+                deferred.resolve();
+            }
+            postModel.dropboxDatastore = this.myPosts.dropboxDatastore;
+            this.myPosts.create(postModel, {wait:true, success: onSuccess});
+            return deferred.promise();
         }
 
 

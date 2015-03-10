@@ -1,4 +1,5 @@
-(function() {
+define(["jquery"], function ($) {
+
     /**
      * Enable .cloudGrid on jQuery objects.
      *
@@ -14,10 +15,10 @@
      *
      * @params {Object} gridArgs The arguments sent to the grid.
      */
-    $.fn.cloudGrid = function(gridArgs) {
-        if (typeof(arguments[0]) === 'string') {
+    $.fn.cloudGrid = function (gridArgs) {
+        if (typeof (arguments[0]) === 'string') {
             var _arguments = arguments;
-            this.each(function() {
+            this.each(function () {
                 var grid = grids[uniqueGridId(this)];
                 if (grid) {
                     grid[gridArgs].apply(grid,
@@ -25,7 +26,7 @@
                 }
             });
         } else {
-            this.each(function() {
+            this.each(function () {
                 gridArgs.container = this;
                 grids[uniqueGridId(this)] = new CloudGrid(gridArgs);
             });
@@ -74,7 +75,7 @@
      *                  and height of the children.
      * @constructor
      */
-    var CloudGrid = function(options) {
+    var CloudGrid = function (options) {
         this.options = {
             $container: $(options.container),
             children: options.children,
@@ -90,7 +91,7 @@
 
         if (options.onInitialized) {
             var self = this;
-            _.defer(function() {
+            _.defer(function () {
                 options.onInitialized.apply(self);
             });
         }
@@ -109,23 +110,23 @@
      *          $('.container').grid('reflowContent');
      *      }, 10));
      */
-    CloudGrid.prototype.reflowContent = function() {
+    CloudGrid.prototype.reflowContent = function () {
         this._createColumns();
 
-        for (var i=0; i < this.options.children.length; i++) {
+        for (var i = 0; i < this.options.children.length; i++) {
             this._positionChild(this.options.children[i], i);
         }
 
         var containerHeight = 0;
         var height;
-        for (var i=0; i < this._columns.length; i++) {
+        for (var i = 0; i < this._columns.length; i++) {
             height = this._columns[i].height;
             if (height > containerHeight) {
                 containerHeight = height;
             }
         }
 
-        this.options.$container.css({'height': containerHeight});
+        this.options.$container.css({ 'height': containerHeight });
     };
 
     /**
@@ -137,10 +138,10 @@
      *
      * @private
      */
-    CloudGrid.prototype._createColumns = function() {
+    CloudGrid.prototype._createColumns = function () {
         // Remove the applied width to the container so the calculation of the
         // width is based on the width the element can actually use.
-        this.options.$container.css({'width': 'auto'});
+        this.options.$container.css({ 'width': 'auto' });
 
         var containerWidth = this.options.$container.width();
         var columnCount = Math.floor(containerWidth / (this.options.gridSize + this.options.gridGutter));
@@ -151,7 +152,7 @@
 
         this._columns = [];
         this._currentColumn = 0;
-        for(var i=0; i < columnCount; i++) {
+        for (var i = 0; i < columnCount; i++) {
             this._columns[i] = new CloudGridColumn(i, this);
         }
     };
@@ -168,7 +169,7 @@
      * @param {number} childIndex The child index within the grid.
      * @private
      */
-    CloudGrid.prototype._positionChild = function(child, childIndex) {
+    CloudGrid.prototype._positionChild = function (child, childIndex) {
         var columnMatches = [[]];
         var columnMatchesCursor = 0;
         var columnCount = this._columns.length;
@@ -176,7 +177,7 @@
         var requiredColumns = $.data(child, 'grid-columns') || 1;
         var i;
 
-        for (i=this._currentColumn; i < (columnCount + this._currentColumn); i++) {
+        for (i = this._currentColumn; i < (columnCount + this._currentColumn) ; i++) {
             var index = i % columnCount;
 
             // If we go from the last column to the first column, we empty the
@@ -207,7 +208,7 @@
         // Find the best match in our set of columns. The best match will be the set
         // of columns that has the smallest height.
         var bestColumnMatch = columnMatches[0];
-        for (i=1; i < columnMatches.length; i++) {
+        for (i = 1; i < columnMatches.length; i++) {
             if (columnMatches[i].length !== requiredColumns) {
                 continue;
             }
@@ -226,8 +227,8 @@
         }
 
         // Add the element into the columns.
-        for (var columnIndex=0; columnIndex < bestColumnMatch.length; columnIndex++) {
-            bestColumnMatch[columnIndex].addChild(child, columnIndex  === 0, childIndex);
+        for (var columnIndex = 0; columnIndex < bestColumnMatch.length; columnIndex++) {
+            bestColumnMatch[columnIndex].addChild(child, columnIndex === 0, childIndex);
         }
 
         this._setChildProperties(child, childIndex);
@@ -243,7 +244,7 @@
      * @param {Element} child The child element.
      * @param {number} childIndex The position of the child within the grid.
      */
-    CloudGrid.prototype._setChildProperties = function(child, childIndex) {
+    CloudGrid.prototype._setChildProperties = function (child, childIndex) {
         var gridColumnAttr = 'grid-columns';
         var gridRowsAttr = 'grid-rows';
 
@@ -268,7 +269,7 @@
      * @param {number} size The size that will be used to calculate the dimension.
      * @return {number}
      */
-    CloudGrid.prototype._getDimensionFromSize = function(size) {
+    CloudGrid.prototype._getDimensionFromSize = function (size) {
         return size * this.options.gridSize + (size - 1) * this.options.gridGutter;
     };
 
@@ -277,7 +278,7 @@
      *
      * @private
      */
-    CloudGrid.prototype._recalculateSmallestColumn = function() {
+    CloudGrid.prototype._recalculateSmallestColumn = function () {
         this._currentColumn = 0;
 
         var columnCount = this._columns.length;
@@ -298,8 +299,8 @@
      *
      * @param {Object.<string, *>} options The new options.
      */
-    CloudGrid.prototype.setOptions = function(options) {
-        _.each(options, function(fn, key) {
+    CloudGrid.prototype.setOptions = function (options) {
+        _.each(options, function (fn, key) {
             this.options[key] = fn;
         }, this);
     };
@@ -311,7 +312,7 @@
      * @param {Grid} grid The reference to the grid that contains the column.
      * @constructor
      */
-    var CloudGridColumn = function(id, grid) {
+    var CloudGridColumn = function (id, grid) {
         /**
          * Index of the column.
          *
@@ -355,7 +356,7 @@
      * @param {boolean} position Flag if the element needs to be positioned or just
      *      need to be added to the grid.
      */
-    CloudGridColumn.prototype.addChild = function(child, position, childIndex) {
+    CloudGridColumn.prototype.addChild = function (child, position, childIndex) {
         var gridOptions = this.grid.options;
         this.children.push(child);
 
@@ -382,7 +383,7 @@
      * @param {Element} child The child element.
      * @return {number}
      */
-    CloudGridColumn.prototype.calculateElementHeight = function(child) {
+    CloudGridColumn.prototype.calculateElementHeight = function (child) {
         var gridOptions = this.grid.options;
         var columns = $.data(child, 'grid-rows');
         return columns * gridOptions.gridSize + gridOptions.gridGutter * (columns - 1);
@@ -401,7 +402,7 @@
      * @param {Element} el The element that contains the grid.
      * @return {number}
      */
-    var uniqueGridId = function(el) {
+    var uniqueGridId = function (el) {
         var $el = $(el);
         var gridId = $el.attr('grid-id');
         if (gridId === undefined) {
@@ -410,4 +411,6 @@
         }
         return gridId;
     };
-}());
+
+    return $.fn.cloudGrid;
+});

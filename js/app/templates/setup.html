@@ -36,7 +36,31 @@
     <div class="col-lg-3 col-sm-4 col-xs-8">
         <% if (!dropboxEnabled) { %>
             <p class="lead text-danger">Dropbox access not authorized.</p>
+        <% } else { %>
+            <% if(dropboxInfo) { %>
+                <form class="form-horizontal">
+                    <div class="form-group bottom-5">
+                        <label class="col-xs-4 control-label">Account</label>
+                        <div class="col-xs-8">
+                            <p class="form-control-static"><%- dropboxInfo.email %></p>
+                        </div>
+                    </div>
+                    <div class="form-group bottom-5">
+                        <label class="col-xs-4 control-label">Space Used</label>
+                        <div class="col-xs-8">
+                            <p class="form-control-static"><%- toMB(dropboxInfo.usedQuota) %> / <%- toMB(dropboxInfo.quota) %></p>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" 
+                                     aria-valuenow="<%- ratio(dropboxInfo) %>" aria-valuemin="0" aria-valuemax="100"
+                                     style="width: <%- ratio(dropboxInfo) %>%;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            <% } %>
         <% } %>
+
     </div>
     <div class="col-sm-3 col-xs-4">
         <div class="btn-group-vertical pull-right">

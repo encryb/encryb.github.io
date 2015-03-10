@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Login</title>
-    <script src="https://www.dropbox.com/static/api/dropbox-datastores-1.0-latest.js"></script>
+    <script src="js/lib/dropbox-datastores-1.2.0.js"></script>
 </head>
 <body>
 <!-- Hide UI until user has authenticated -->
@@ -33,27 +33,6 @@
         client.authenticate();
         return false;
     }
-
-    <!--
-      function handleClientLoad() {
-        window.setTimeout(checkAuth,1);
-      }
-
-      function checkAuth() {
-        gapi.auth.authorize({client_id: CLIENT_ID, scope: SCOPES, immediate: true}, handleAuthResult);
-      }
-      function handleAuthResult(authResult) {
-        var authorizeButton = document.getElementById('authorize-button');
-        if (authResult && !authResult.error) {
-          window.location = "require.html";
-        } else {
-          authorizeButton.style.visibility = '';
-          authorizeButton.onclick = handleAuthClick;
-        }
-      }
-
-    -->
-
 </script>
 
 

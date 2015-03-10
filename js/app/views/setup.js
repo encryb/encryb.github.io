@@ -2,16 +2,26 @@ define([
     'jquery',
     'underscore',
     'backbone',
+    'bootstrap',
     'bootbox',
     'marionette',
     'require-text!app/templates/setup.html',
     'require-text!app/templates/password.html'
 
-], function($, _, Backbone, Bootbox, Marionette, SetupTemplate, PasswordTemplate){
+], function($, _, Backbone, Bootstrap, Bootbox, Marionette, SetupTemplate, PasswordTemplate){
 
     var SetupView = Marionette.ItemView.extend({
 
-        template: _.template( SetupTemplate ),
+        template: _.template(SetupTemplate),
+
+        templateHelpers: {
+            toMB: function (value) {
+                return Math.round(value / 1000000) + "MB";
+            },
+            ratio: function (dropboxInfo) {
+                return Math.round(100 * dropboxInfo.usedQuota / dropboxInfo.quota);
+            }
+        },
 
         events: {
             "change #uploadKeysInput": "keysUpload",

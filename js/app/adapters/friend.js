@@ -3,12 +3,13 @@ define([
     'backbone',
     'marionette',
     'app/app',
-    'app/encryption',
+    'app/encryption/async',
+    'app/encryption/keys',
     'app/services/dropbox',
     'app/remoteManifest',
     'utils/misc'
 ],
-function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, MiscUtils) {
+function ($, Backbone, Marionette, App, EncryptionAsync, Keys, Dropbox, RemoteManifest, MiscUtils) {
 
     var FriendAdapter = {
 
@@ -17,7 +18,7 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
         notifyMePromises: {},
         outgoingChatPromises: {},
 
-        setFriendAdapter: function(friends) {
+        addFriendsList: function(friends) {
             friends.on("add", this.attachFriend.bind(this));
             this.friends = friends;
         },
@@ -114,18 +115,20 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
             //send trigger to controller to open a chat window if need be
             App.vent.trigger("chat:received", friend);
             var textBuffer = chatLine.get("text").buffer;
-            var text = Encryption.decryptText(textBuffer, Encryption.getKeys().secretKey);
-            var collection = App.state.chats[friend.get("userId")];
-            var lastChat = collection.last();
+            var key = {secretKey: Keys.getEncodedKeys().secretKey};
+            $.when(EncryptionAsync.decryptText(key, textBuffer)).done(function(text){
+                var collection = App.state.chats[friend.get("userId")];
+                var lastChat = collection.last();
 
-            if (lastChat && !lastChat.get("isMine") &&
-                (chatLine.get("time") - lastChat.get("time") < 30000)) {
-                lastChat.set("text", lastChat.get("text") + "\n" + text);
-            }
-            else {
-                var newChat = new Backbone.Model({time: chatLine.get("time"), text: text});
-                collection.add(newChat);
-            }
+                if (lastChat && !lastChat.get("isMine") &&
+                    (chatLine.get("time") - lastChat.get("time") < 30000)) {
+                    lastChat.set("text", lastChat.get("text") + "\n" + text);
+                }
+                else {
+                    var newChat = new Backbone.Model({time: chatLine.get("time"), text: text});
+                    collection.add(newChat);
+                }
+            });
         },
 
         clearReceivedChats: function(friend, receivedTime) {
@@ -175,9 +178,11 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
         sendChat: function(friend, text) {
             var time = new Date().getTime();
             $.when(this._getOutgoingChatCollection(friend)).done(function(chats){
-                var encText = Encryption.encryptWithEcc(friend.get('publicKey'),  "plain/text", text);
-                var encArray = new Uint8Array(encText);
-                chats.create({time:time, text: encArray});
+                var key = {publicKey: friend.get("publicKey")};
+                $.when(EncryptionAsync.encrypt(key, "plain/json", text, false)).done(function(encText) {
+                    var encArray = new Uint8Array(encText);
+                    chats.create({time: time, text: encArray});
+                });
             });
             var chat = new Backbone.Model({isMine: true, time:time, text: text});
 
@@ -280,21 +285,43 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
                         name: profile.get('name'),
                         intro: profile.get('intro'),
                         pictureUrl: profile.get('pictureUrl'),
-                        publicKey: Encryption.getEncodedKeys().publicKey,
-                        lastUpdated: new Date().getTime()
+                        publicKey: Keys.getEncodedKeys().publicKey
                     };
 
-                    if(!notifyModel.get("manifestUrl")) {
-                        friendAdapter.saveManifest(friend).then(Dropbox.shareDropbox).done(function(url){
-                           changes['manifestUrl'] = url;
+                    $.when(friendAdapter.saveManifest(friend))
+                        .then(friendAdapter.shareManifest.bind(null, notifyModel))
+                        .done(function() {
+                            changes["lastUpdated"] = new Date().getTime();
                             notifyModel.save(changes);
                         });
-                    }
-                    else {
-                        notifyModel.save(changes);
-                    }
                 }
             );
+        },
+
+        shareManifest: function(notifyModel, manifestStats, archiveStats) {
+            var deferred = $.Deferred();
+
+            var tasks = [];
+            if (manifestStats && !notifyModel.has("manifestUrl")) {
+                var shareManifest = Dropbox.share(manifestStats).then(function (url) {
+                    notifyModel.set("manifestUrl", url);
+                });
+                tasks.push(shareManifest);
+            }
+
+            if (archiveStats && !notifyModel.has("archiveUrl")) {
+                var shareArchive = Dropbox.share(archiveStats).then(function (url) {
+                    notifyModel.set("archiveUrl", url);
+                });
+                tasks.push(shareArchive);
+            }
+
+            $.when(tasks).done(function(){
+                deferred.resolve(tasks.length > 0);
+            });
+
+            return deferred.promise();
+
         },
 
 
@@ -326,28 +353,49 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
         },
 
         saveManifests: function() {
+            var friendAdapter = this;
             App.state.myFriends.each(function(friend) {
-                setTimeout(function() { FriendAdapter.saveManifest(friend); }, 0);
+                $.when(friendAdapter._getModelUsedToNotifyFriend(friend)).done(function(notifyModel){
+                    friendAdapter.saveManifest(friend)
+                        .then(friendAdapter.shareManifest.bind(null, notifyModel))
+                        .done(function() {
+                            notifyModel.set("lastUpdated", new Date().getTime());
+                            notifyModel.save();
+                        });
+                });
             });
         },
 
         saveManifest: function(friend) {
             var deferred = $.Deferred();
 
-            var manifest = {};
+            var manifest = App.state.toManifest(friend);
 
-            manifest['posts'] = App.state.myPosts.toManifest(friend);
-            manifest['upvotes'] = App.state.myUpvotes.toJSON();
-            manifest['comments'] = App.state.myComments.toJSON();
-            manifest['friends'] = App.state.myFriends.toManifest(friend);
+            var currentManifest = manifest.manifest;
+            var archiveManifest = manifest.archive;
 
-            var encText = Encryption.encryptWithEcc(friend.get('publicKey'),  "plain/text", JSON.stringify(manifest), false);
-            Dropbox.uploadDropbox(friend.get('manifestFile'), encText).done(function(stats) {
-                deferred.resolve(stats);
-                FriendAdapter.notifyFriend(friend);
+            var key = {publicKey: friend.get("publicKey")};
 
+            var currentDeferred = $.Deferred();
+            $.when(EncryptionAsync.encrypt(key, "plain/json", JSON.stringify(currentManifest), false)).done(function(encText){
+                Dropbox.upload(friend.get("manifestFile"), encText).done(function (stats) {
+                    currentDeferred.resolve(stats);
+                });
             });
 
+            var archiveDeferred = null;
+            if (manifest.archive) {
+                archiveDeferred = $.Deferred();
+                $.when(EncryptionAsync.encrypt(key, "plain/json", JSON.stringify(archiveManifest), false)).done(function (encText) {
+                    Dropbox.upload(friend.get("archiveFile"), encText).done(function (stats) {
+                        archiveDeferred.resolve(stats);
+                    });
+                });
+            }
+
+            $.when(currentDeferred, archiveDeferred).done(function(currentStats, archiveStats) {
+                deferred.resolve(currentStats, archiveStats);
+            });
 
             return deferred;
         },
@@ -355,13 +403,21 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
         getManifest: function(friend, friendsManifest) {
 
             var friendAdapter = this;
-
             Dropbox.downloadUrl(friendsManifest).done(function (data) {
+                var key = {secretKey: Keys.getEncodedKeys().secretKey};
+                $.when(EncryptionAsync.decryptText(key, data)).done(function(decryptedData){
+                        try {
+                            var manifest = JSON.parse(decryptedData);
+                            friendAdapter.updateCollection(friend, manifest);
+                        }
+                        catch (e) {
+                            friend.set("error", "Failed to parse " + friend.escape("name") + "'s manifest: " + e.message);
+                        }
+                    })
+                    .fail (function(error) {
+                        friend.set("error", "Failed to decode " + friend.escape("name") + "'s manifest: " + error);
+                    });
 
-                var decryptedData = Encryption.decryptText(data, Encryption.getKeys().secretKey);
-                var manifest = JSON.parse(decryptedData);
-
-                friendAdapter.updateCollection(friend, manifest);
             });
         },
 
@@ -446,8 +502,6 @@ function ($, Backbone, Marionette, App, Encryption, Dropbox, RemoteManifest, Mis
 
             }
         }
-
-
     };
 
     return FriendAdapter;

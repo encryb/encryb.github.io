@@ -4,30 +4,27 @@ define([
     'backbone',
     'jcrop',
     'marionette',
-    'app/encryption',
     'utils/image',
     'require-text!app/templates/profile.html'
 
-], function($, _, Backbone, Jcrop, Marionette, Encryption, ImageUtil, ProfileTemplate){
+], function($, _, Backbone, Jcrop, Marionette, ImageUtil, ProfileTemplate){
 
     var ProfileView = Marionette.ItemView.extend({
 
         template: _.template( ProfileTemplate ),
 
-        initialize: function() {
-            this.listenTo(this.model.get("profile"), "change", this.render);
-            this.listenTo(this.model, "change", this.render);
-        },
-
         changes : {},
 
         ui: {
+            errorMessage: "#errorMessage",
+            errorDetails: "#errorDetails",
             profilePicture: "#profilePicture",
             newProfilePicture: "#newProfilePicture",
             newProfile: "#newProfile",
             profilePictureExisting: "#profilePictureExisting",
             updateButton: "#updateButton",
-            createButton: "#createAccount",
+            cancelButton: "#cancelButton",
+            createButton: "#createButton",
             loadingImage: ".loading-img"
         },
 
@@ -38,31 +35,49 @@ define([
             "change #pictureInput": "updatePicture",
             "click #cropPictureButton": "cropPictureButton",
             "click @ui.updateButton": "updateProfile",
+            "click @ui.cancelButton": "cancelProfile",
             "click @ui.createButton": "createProfile"
         },
 
         triggers: {
             "click #editKey" : "key:edit"
         },
-
-        updateProfile: function() {
+        createProfile: function (event) {
+            event.preventDefault();
             if (this.needsCrop) {
                 this.cropPicture();
             }
-
-            this.trigger("profile:updated", this.changes);
-        },
-
-        createProfile: function() {
-            if (this.needsCrop) {
-                this.cropPicture();
-            }
-
+            var onError = function () {
+                this.ui.createButton.removeClass("hide");
+                this.ui.loadingImage.addClass("hide");
+                window.scrollTo(0, 0);
+            }.bind(this);
             this.ui.createButton.addClass("hide");
             this.ui.loadingImage.removeClass("hide");
-            this.trigger("profile:create", this.changes);
+            this.trigger("profile:create", this.changes, onError);
+        },
+        updateProfile: function (event) {
+            event.preventDefault();
+            if (this.needsCrop) {
+                this.cropPicture();
+            }
+            var onError = function () {
+                this.ui.updateButton.removeClass("hide");
+                this.ui.cancelButton.removeClass("hide");
+                this.ui.loadingImage.addClass("hide");
+                window.scrollTo(0, 0);
+            }.bind(this);
+
+            this.ui.updateButton.addClass("hide");
+            this.ui.cancelButton.addClass("hide");
+            this.ui.loadingImage.removeClass("hide");
+            
+            this.trigger("profile:updated", this.changes, onError);
         },
 
+        cancelProfile: function() {
+            this.trigger("profile:cancel");
+        },
         nameChange: function(event){
             var name = event.target.value;
             this.changes['name'] = name;
@@ -72,7 +87,6 @@ define([
             else {
                 this.ui.updateButton.addClass("disabled");
             }
-
         },
 
         introChange: function(event) {
@@ -122,21 +136,22 @@ define([
             this.needsCrop = true;
             var view = this;
             var image = this.ui.newProfilePicture.children();
-            var size = ImageUtil.getNaturalSize(image);
-            var vertGap = size.width / 10;
-            var horzGap = size.height / 10;
-            image.Jcrop({
-                aspectRatio: 1.2,
-                setSelect: [vertGap, horzGap, size.width - vertGap, size.height - horzGap],
-                trueSize: [size.width, size.height],
-                onRelease: function() {
-                    var select = view.jcrop_profile.tellSelect();
-                    if (select.w == 0 || select.h == 0) {
-                        view.jcrop_profile.setSelect([vertGap, horzGap, size.width - vertGap, size.height - horzGap])
+            $.when(ImageUtil.getNaturalSize(image.attr("src"))).done(function(size){
+                var vertGap = size.width / 10;
+                var horzGap = size.height / 10;
+                image.Jcrop({
+                    aspectRatio: 1.2,
+                    setSelect: [vertGap, horzGap, size.width - vertGap, size.height - horzGap],
+                    trueSize: [size.width, size.height],
+                    onRelease: function() {
+                        var select = view.jcrop_profile.tellSelect();
+                        if (select.w == 0 || select.h == 0) {
+                            view.jcrop_profile.setSelect([vertGap, horzGap, size.width - vertGap, size.height - horzGap])
+                        }
                     }
-                }
-            },function(){
-                view.jcrop_profile = this;
+                },function(){
+                    view.jcrop_profile = this;
+                });
             });
         }
     });

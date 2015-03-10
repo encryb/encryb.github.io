@@ -1,6 +1,7 @@
 define([
     'backbone',
     'marionette',
+    'bootstrap',
     'bootbox',
     'app/app',
     'app/adapters/friend',
@@ -17,15 +18,15 @@ define([
     'app/views/headerPanel',
     'app/views/invites',
     'app/views/chats',
-    'app/encryption',
+    'app/encryption/sync',
+    'app/encryption/keys',
     'app/services/appengine',
     'app/services/dropbox',
-    'utils/collection-paged',
     'utils/data-convert'
     ],
-function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State, PermissionColl, FriendModel, PostModel,
+function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdapter, State, PermissionColl, FriendModel, PostModel,
           WallView, CreatePostView, EditPostView, PostsView, FriendsView, HeaderPanelView, InvitesView, ChatsView,
-          Encryption, AppEngine, Dropbox, CollectionPaged, DataConvert) {
+          Encryption, Keys, AppEngine, Dropbox, DataConvert) {
 
 
     function startDownload(uri, name) {
@@ -38,9 +39,8 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
 
     var Controller = Marionette.Controller.extend({
 
-
         _checkSettings: function() {
-            var keysLoaded = (Encryption.getKeys() != null);
+            var keysLoaded = (Keys.getKeys() != null);
             var dropboxAuthenticated = Dropbox.client.isAuthenticated();
 
             if (!keysLoaded || !dropboxAuthenticated) {
@@ -59,7 +59,7 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                     this._profile(profile);
                     return;
                 }
-                var publicKey = Encryption.getEncodedKeys().publicKey;
+                var publicKey = Keys.getEncodedKeys().publicKey;
                 if (publicKey != profile.get("publicKey")) {
                     this._profile(profile);
                     return;
@@ -70,15 +70,13 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
 
 
         _setupState: function(profile) {
-
             if (!App.state) {
                 App.state = new State({profile: profile});
-                FriendAdapter.setFriendAdapter(App.state.myFriends);
+                FriendAdapter.addFriendsList(App.state.myFriends);
             }
-
-
         },
-        showWall: function() {
+        showWall: function () {
+            App.clearError();
             this._loadProfile(this._showWall.bind(this));
         },
 
@@ -104,12 +102,21 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
             App.main.show(wall);
 
             $.when(App.state.fetchAll()).done(function() {
-                var paged = new CollectionPaged(null,
-                    {limit: 3, collection: App.state.filteredPosts, comparator: App.state.posts.comparator});
-
                 var postsView = new PostsView({
-                    collection: paged
+                    collection: App.state.posts
                 });
+
+                App.vent.on("friend:selected", function (friendModel) {
+                    postsView.filter = function (child, index, collection) {
+                        return (child.get("userId") == friendModel.get("userId"));                     
+                    };
+                    postsView.render();
+                });
+                App.vent.on("friend:unselect", function () {
+                    postsView.filter = null;
+                    postsView.render();
+                });
+
                 wall.posts.show(postsView);
             });
 
@@ -125,7 +132,7 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                 collection: App.state.myFriends
             });
             wall.friends.show(friendsView);
-
+            
             var invitesView = new InvitesView({
                 collection: App.state.myInvites
             });
@@ -194,6 +201,9 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
 
             wall.listenTo(App.vent, "friend:unselect", function(){
                 wall.friendsDetails.empty();
+                wall.posts.$el.show();
+                wall.createPost.$el.show();
+
             });
 
             wall.listenTo(App.vent, "invite:find", function(friendId) {
@@ -214,6 +224,8 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                     require(["app/views/friendsDetails"], function (FriendsDetailsView) {
                         var details = new FriendsDetailsView({model: model, invitePreview: true});
                         wall.friendsDetails.show(details);
+                        wall.posts.$el.hide();
+                        wall.createPost.$el.hide();
                         window.scrollTo(0,0);
                     });
                 });
@@ -246,20 +258,19 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                 var postModel = new PostModel(postMeta);
                 postModel.contentList = contentList;
                 var upload = PostAdapter.uploadPost(postModel);
-                $.when(upload).done(function() {
+                $.when(upload)
+                    .fail(function (error) {
+                        App.showError(error);
+                        uiNotifyDeferred.reject();
+                    })
+                    .done(function() {
+                        var jsonContent = PostAdapter.removeNonPersistentFields(contentList);
+                        postModel.set("content", jsonContent);
 
-                    var jsonContent = PostAdapter.removeNonPersistentFields(contentList);
-                    postModel.set("content", jsonContent);
-                    App.state.myPosts.add(postModel);
-                    uiNotifyDeferred.resolve();
-
-                    // made sure we get get Id for this post before we save
-                    // $BUG: (Why bind?)
-                    var onSuccess = function(){
-                        FriendAdapter.saveManifests();
-                    }.bind(this);
-
-                    postModel.save(null, {wait:true, success: onSuccess});
+                        $.when(App.state.createMyPost(postModel, contentList)).done(function(){
+                            FriendAdapter.saveManifests();
+                            uiNotifyDeferred.resolve();
+                    });
                 });
             });
 
@@ -347,23 +358,21 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                     FriendAdapter.saveManifests();
                 }
             });
-            wall.listenTo(App.vent, "file:download", function(content, password){
-
-                if (content.has("data")) {
-                    startDownload(content.get("data"), content.get("filename"));
-                    return;
-                }
-                Dropbox.downloadUrl(content.get('dataUrl'))
-                    .then(Encryption.decryptDataAsync.bind(null, password))
-                    .done(function(data) {
-                        content.set("data", data);
-                        startDownload(data, content.get("filename"));
-                    });
+            wall.listenTo(App.vent, "file:download", function(content){
+                $.when(content.getData()).done(function(data){
+                    startDownload(data, content.get("filename"));
+                });
             });
 
             $.when(App.state.fetchAll()).done(function(){
                 this._processAccepts();
                 this._processInvites();
+
+                // If there are no friends, expand friends panel to show add friend element
+                if (App.state.myFriends.size() === 0) {
+                    $("#collapseFriends").removeClass("collapse");
+                }
+
             }.bind(this));
 
         },
@@ -424,13 +433,15 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
             });
         },
 
-        settings: function(displayAbout) {
+        settings: function (displayAbout) {
+            App.clearError();
             displayAbout = displayAbout || false;
             var controller = this;
             var model = new Backbone.Model();
 
-            var keysLoaded = (Encryption.getKeys() != null);
+            var keysLoaded = (Keys.getKeys() != null);
             model.set("dropboxEnabled", Dropbox.client.isAuthenticated());
+            model.set("dropboxInfo", false);
             model.set("keysLoaded", keysLoaded);
             model.set("displayAbout", displayAbout);
 
@@ -439,6 +450,16 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                 var setupView = new SetupView({model: model});
                 App.main.show(setupView);
 
+                var getInfo = function (_model) {
+                    $.when(Dropbox.getInfo()).done(function (info) {
+                        _model.set("dropboxInfo", info);
+                    });
+                };
+
+                if (model.get("dropboxEnabled")) {
+                    getInfo(model);
+                }
+
                 setupView.on("dropbox:login", function () {
                     Dropbox.client.authenticate({}, function (error, client) {
                         if (error) {
@@ -446,6 +467,7 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                         }
                         else {
                             model.set("dropboxEnabled", true);
+                            getInfo(model);
                         }
                     });
 
@@ -454,34 +476,35 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                     Dropbox.client.signOut({}, function () {
                         window.location.href = "https://www.dropbox.com/logout";
                         model.set("dropboxEnabled", false);
-                    })
+                        model.set("dropboxInfo", false);
+                    });
                 });
 
                 setupView.on("keys:create", function () {
-                    Encryption.createKeys();
+                    Keys.createKeys();
                     model.set("keysLoaded", true);
                 });
 
                 setupView.on("keys:remove", function () {
-                    Encryption.removeKeys();
+                    Keys.removeKeys();
                     model.set("keysLoaded", false);
                 });
                 setupView.on("keys:download", function () {
-                    var keys = Encryption.getEncodedKeys();
+                    var keys = Keys.getEncodedKeys();
                     var uri = "data:text/javascript;base64," + window.btoa(JSON.stringify(keys));
                     startDownload(uri, "encryb.keys");
                 });
                 setupView.on("keys:upload", function (keysString) {
                     var keys = JSON.parse(keysString);
-                    Encryption.saveKeys(keys['secretKey'], keys['publicKey'], keys['databaseKey']);
+                    Keys.saveKeys(keys['secretKey'], keys['publicKey'], keys['databaseKey']);
                     model.set("keysLoaded", true);
                 });
 
                 var saveKeysToDropbox = function(password) {
-                    var keys = Encryption.getEncodedKeys();
+                    var keys = Keys.getEncodedKeys();
                     var jsonKeys = JSON.stringify(keys);
                     var encKeys = Encryption.encrypt(password, "text/keys", jsonKeys, false);
-                    Dropbox.uploadDropbox("encryb.keys", encKeys);
+                    Dropbox.upload("encryb.keys", encKeys);
                 }
 
 
@@ -490,18 +513,18 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                 });
 
                 setupView.on("keys:loadFromDropbox", function(password){
-                    $.when(Dropbox.downloadDropbox("encryb.keys")).done(function(encKeys){
+                    $.when(Dropbox.download("encryb.keys")).done(function(encKeys){
                         var jsonKeys = Encryption.decryptText(encKeys, password);
                         var keys = JSON.parse(jsonKeys);
                         var forceSave = false;
 
                         // $LEGACY
                         if (!keys.hasOwnProperty('databaseKey')) {
-                            keys.databaseKey = JSON.stringify(Encryption.generateDatabaseKey());
+                            keys.databaseKey = JSON.stringify(Keys.generateDatabaseKey());
                             forceSave = true;
                         }
 
-                        Encryption.saveKeys(keys.secretKey, keys.publicKey, keys.databaseKey);
+                        Keys.saveKeys(keys.secretKey, keys.publicKey, keys.databaseKey);
                         if (forceSave) {
                             saveKeysToDropbox(password);
                         }
@@ -517,7 +540,8 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
             });
         },
 
-        profile: function() {
+        profile: function () {
+            App.clearError();
             this._loadProfile(this._profile.bind(this));
         },
         _profile: function(profile) {
@@ -527,23 +551,12 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
             require(["app/views/profile"], function (ProfileView) {
                 var model = new Backbone.Model();
                 model.set("profile", profile);
-                model.set("publicKey", Encryption.getEncodedKeys().publicKey);
+                model.set("publicKey", Keys.getEncodedKeys().publicKey);
                 var profileView = new ProfileView({model: model});
                 App.main.show(profileView);
 
                 profileView.on("key:edit", function() {
                     controller.settings();
-                });
-
-                profileView.on("key:cloudRefresh", function() {
-                    $.when(AppEngine.findProfile(Dropbox.client.dropboxUid())).done(function(profile){
-                        if(profile.publicKey) {
-                            model.set("publicKey", profile.publicKey);
-                        }
-                        else {
-                            model.set("publicKey", "none");
-                        }
-                    });
                 });
 
                 var changeProfile = function(changes, _profile) {
@@ -560,13 +573,23 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                         var deferred = new $.Deferred();
                         deferreds.push(deferred);
                         var picture = DataConvert.dataUriToTypedArray(resized);
-                        Dropbox.uploadDropbox("profilePic",  picture['data']).then(Dropbox.shareDropbox).done(function(url) {
-                            _profile.set('pictureUrl', url);
-                            deferred.resolve();
-                        });
+                        var pictureId = (new Date).getTime();
+                        Dropbox.upload(Dropbox.getPath("profilePic", pictureId), picture["data"])
+                            .then(Dropbox.share)
+                            .done(function (url) {
+                                // remove previous profile picture
+                                if (_profile.has("pictureId")) {
+                                    Dropbox.remove(Dropbox.getPath("profilePic", _profile.get("pictureId")));
+                                }
+                                _profile.set("pictureUrl", url);
+                                _profile.set("pictureId", pictureId);
+                                deferred.resolve();
+                            });
                     }
-                    var publicKey = Encryption.getEncodedKeys().publicKey;
-                    profile.set("publicKey", publicKey);
+                    var publicKey = Keys.getEncodedKeys().publicKey;
+                    if (_profile.get("publicKey") != publicKey) {
+                        _profile.set("publicKey", publicKey);
+                    }
 
                     return deferreds;
                 }
@@ -576,34 +599,56 @@ function (Backbone, Marionette, Bootbox, App, FriendAdapter, PostAdapter, State,
                     var deferreds = changeProfile(changes, profile);
                     $.when.apply($, deferreds).done(function() {
                         $.when(AppEngine.createProfile(profile)).done(function() {
-                            controller._setupState(profile);
-                            $.when(App.state.fetchAll()).done(function () {
-                                controller.showWall();
-                                App.appRouter.navigate("");
-                            });
+                            controller.showWall();
+                            App.appRouter.navigate("");
                         });
                     });
                 });
 
-                profileView.on('profile:updated', function(changes) {
+                profileView.on('profile:updated', function(changes, errorCallback) {
 
+                    var changeProfileFail = function () {
+                        App.showError("Could not upload profile picture");
+                        errorCallback();
+                    };
+                    var publishFail = function () {
+                        App.showError("Could not publish updated profile");
+                        errorCallback();
+                    };
+                    var saveFail = function () {
+                        App.showError("Could not save updated profile");
+                        errorCallback();
+                    }
+                
                     var deferreds = changeProfile(changes, profile);
-
-                    $.when.apply($, deferreds).done(function() {
+                    $.when.apply($, deferreds).fail(changeProfileFail).done(function () {
+                        var deferred = $.Deferred();
                         var profileChanges = profile.changedAttributes();
-                        controller.showWall();
-                        App.appRouter.navigate("");
-
-                        if (profileChanges) {
-                            controller._setupState(profile);
-                            $.when(App.state.fetchAll()).done(function() {
-                                FriendAdapter.sendUpdatedProfile(profileChanges);
-                                AppEngine.publishProfile(App.state.myId, profile);
-                                profile.save();
-                            });
+                        if (!profileChanges) {
+                            controller.showWall();
+                            App.appRouter.navigate("");
+                            return;
                         }
 
-                    });
+                        controller._setupState(profile);
+                        $.when(App.state.fetchAll()).done(function () {
+                            FriendAdapter.sendUpdatedProfile(profileChanges);
+                            $.when(AppEngine.publishProfile(profile)).fail(publishFail).done(function () {
+                                profile.save(null, {
+                                    success: function (model, response) {
+                                        controller.showWall();
+                                        App.appRouter.navigate("");
+                                    },
+                                    error: saveFail
+                                });
+                            });
+                        });
+                    });   
+                });
+
+                profileView.on("profile:cancel", function () {
+                    controller.showWall();
+                    App.appRouter.navigate("");
                 });
             });
         }

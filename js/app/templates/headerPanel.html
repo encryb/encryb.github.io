@@ -1,13 +1,17 @@
 <% if (typeof(name) != "undefined") { %>
 
-    <div class="hidden-xs pull-right" style="padding-left:10px">
+    <div class="pull-right" style="padding-left:10px">
         <div><%- name %></div>
         <div class="text-center"><code><%- userId %></code></div>
     </div>
-    <a href="#profile">
-        <img class="img-responsive pull-right header-icon header-profile" src="<%- pictureUrl %>">
-    </a>
-    <a href="#settings">
-        <img class="img-responsive pull-right header-icon"  src="img/settings.png">
-    </a>
+    <div class="pull-right">
+        <a href="#profile">
+            <img class="img-responsive pull-right header-icon header-profile" src="<%- pictureUrl %>">
+        </a>
+    </div>
+    <div class="pull-right">
+        <a href="#settings">
+            <img class="img-responsive pull-right header-icon"  src="img/settings.png">
+        </a>
+    </div>
 <% } %>

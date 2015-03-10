@@ -29,33 +29,33 @@ define([
 
   var UpvotesView = Marionette.CompositeView.extend({
       template: _.template( UpvotesTemplate ),
-      templateHelpers: {
-          sumUpvotes: function(){
-              var sum = this.friendUpvotes.length;
-              if (this.upvoted) {
-                  sum++;
+      templateHelpers: function() {
+          var friends = this.model.get("friendUpvotes");
+          return {
+              sumUpvotes: function(){
+                  var sum = friends.length;
+                  if (this.upvoted) {
+                      sum++;
+                  }
+                  return sum;
               }
-              return sum;
           }
       },
 
       childView: UpvoteView,
 
       childViewContainer: "#upvotes",
+
+      _initialEvents: function() {
+      },
       modelEvents: {
           "change": "render"
       },
       collectionEvents: {
-          "add": "delayedRender",
-          "remove": "delayedRender"
-      },
-      // we need this because standard render fires before
-      // compositeview adds child to the view, resulting in duplicates
-      delayedRender: function() {
-          var view = this;
-          setTimeout(function(){view.render()}, 0);
-      }
+          "add": "render",
+          "remove": "render"
 
+      }
   });
   return UpvotesView;
 });

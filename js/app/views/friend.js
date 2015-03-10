@@ -34,6 +34,9 @@ define([
         },
         openChat: function() {
             App.vent.trigger("friend:chat", this.model);
+        },
+        onRender: function() {
+            this.$el.find('[data-toggle="tooltip"]').tooltip();
         }
 
     });

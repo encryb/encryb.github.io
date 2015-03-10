@@ -98,16 +98,35 @@ define([
                     var video = document.createElement('video');
                     video.src = WindowUrl.createObjectURL(file);
 
+                    var captureVideoFrame = function(sourceVideo, location) {
+                        var deferred = $.Deferred();
+                        $(sourceVideo).one("seeked", function () {
+                            var frame = ImageUtil.captureFrame(video, 480, 360);
+                           deferred.resolve(frame);
+                        });
+                        sourceVideo.currentTime = sourceVideo.duration * location;
+                        return deferred.promise();
+                    }
+
                     $(video).one("loadedmetadata", function (_video, _file, _loadDeferred, _content) {
                         return function () {
-                            $(_video).one("seeked", function () {
-                                var frame = ImageUtil.captureFrame(_video, 480, 360);
-                                WindowUrl.revokeObjectURL(video.src);
-                                _content['video'] = _file;
-                                _content['thumbnail'] = frame;
-                                _loadDeferred.resolve();
-                            });
-                            _video.currentTime = _video.duration / 3;
+                            var frames = [];
+                            var addToFrames = function(frame) {
+                                frames.push(frame);
+                            }
+                            $.when(captureVideoFrame(video, 0.1)).then(addToFrames)
+                                .then(captureVideoFrame.bind(null, video, 0.25)).then(addToFrames)
+                                .then(captureVideoFrame.bind(null, video, 0.40)).then(addToFrames)
+                                .then(captureVideoFrame.bind(null, video, 0.55)).then(addToFrames)
+                                .then(captureVideoFrame.bind(null, video, 0.70)).then(addToFrames)
+                                .then(captureVideoFrame.bind(null, video, 0.85)).then(addToFrames)
+                                .done(function() {
+                                    WindowUrl.revokeObjectURL(video.src);
+                                    _content['video'] = _file;
+                                    _content['videoFrames'] = frames;
+                                    _loadDeferred.resolve();
+                                });
+
                         };
                     }(video, file, loadDeferred, content));
                 }

@@ -1,9 +1,8 @@
 define([
   'backbone',
   'app/models/post',
-  'app/services/dropbox',
   'app/collections/encryptedDatastore'
-], function(Backbone, Post, Dropbox, EncryptedDatastore){
+], function(Backbone, Post, EncryptedDatastore){
 
 var Posts = Backbone.Collection.extend({
     model: Post,

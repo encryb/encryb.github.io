@@ -2,8 +2,9 @@ define([
     'backbone',
     'sjcl',
     'app/services/dropbox',
-    'app/encryption'
-], function(Backbone, Sjcl, Dropbox, Encryption){
+    'app/encryption/sync',
+    'app/encryption/keys'
+], function(Backbone, Sjcl, Dropbox, Encryption, Keys){
 
     var EncryptedDatastore = function(name, options) {
         options = options || {};
@@ -26,7 +27,7 @@ define([
             var encryptedArray = json["_enc_"];
 
             try {
-                var modelString = Encryption.decryptText(encryptedArray.buffer, Encryption.getKeys().databaseKey);
+                var modelString = Encryption.decryptText(encryptedArray.buffer, Keys.getKeys().databaseKey);
                 var decryptedJson = JSON.parse(modelString);
                 if (json.hasOwnProperty("id")) {
                     decryptedJson["id"] = json["id"];
@@ -62,7 +63,7 @@ define([
             var clone = _.omit(model.toJSON(), ["id"]);
             var modelString = JSON.stringify(clone);
 
-            var encryptionKey = Sjcl.codec.bytes.toBits(Encryption.getKeys().databaseKey);
+            var encryptionKey = Sjcl.codec.bytes.toBits(Keys.getKeys().databaseKey);
 
             var encrypted = Encryption.encrypt(encryptionKey, null, modelString, false);
             var encryptedArray  = new Uint8Array(encrypted);
