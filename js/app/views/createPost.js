@@ -112,8 +112,6 @@ define([
                         createPostView.ui.loadingImage.addClass("hide");
 
                         createPostView.dropzoneView.dropzone.removeAllFiles();
-
-                        selectize.clear();
                 });
             });
         },

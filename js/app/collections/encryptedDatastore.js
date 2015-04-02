@@ -39,7 +39,7 @@ define([
             }
 
             // we have _enc_, but could not decrypt. Check if there is any plain data and if so return it without _enc_
-            console.log("keys", Object.keys(json));
+            console.log("keys", Object.keys(json), exception);
             if (Object.keys(json).length > 2) {
                 return _.omit(json, "_enc_");
             }

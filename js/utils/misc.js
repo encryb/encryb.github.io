@@ -28,6 +28,13 @@ define([
             return fullTime;
         },
 
+        // http://stackoverflow.com/questions/10420352/converting-file-size-in-bytes-to-human-readable
+        formatSize: function(bytes) {
+            if (bytes == 0) { return "0.00 B"; }
+            var e = Math.floor(Math.log(bytes) / Math.log(1024));
+            return (bytes/Math.pow(1024, e)).toFixed(2)+' KMGTP'.charAt(e)+'B';
+        },
+
         // if scroll reaches top or bottom of target element, don't pass it to the parent
         // from http://stackoverflow.com/questions/5802467/prevent-scrolling-of-parent-element
         // with changes
@@ -58,8 +65,9 @@ define([
         isElementVisible: function($elem, margin) {
             var $window = $(window);
 
-            var viewTop = $window.scrollTop() - margin;
-            var viewBottom = viewTop + $window.height() + margin;
+            var top = $window.scrollTop();
+            var viewTop = top -margin;
+            var viewBottom = top + $window.height() + margin;
 
             var elemTop = $elem.offset().top;
             var elemBottom = elemTop + $elem.height();

@@ -14,21 +14,35 @@ define([
             return {
                 isRemovable: function () {
                     return removable;
+                },
+                formatTime: function (duration) {
+                    var mins = Math.floor(duration / 60);
+                    var seconds = Math.round(duration % 60);
+                    if (seconds < 10) {
+                        seconds = "0" + seconds;
+                    }
+                    return mins + ":" + seconds;
                 }
             }
         },
-        className: "gridItem pointer-hand",
+        className: "pointer-hand",
         attributes: function () {
             var style = "";
             if (this.model.has("thumbnail")) {
                 style += "background-image: url(" + this.model.escape("thumbnail") + ");";
-                style += "background-size: 100% auto; background-repeat: no-repeat;";
+                style += "background-repeat: no-repeat;";
 
             }
             else if (this.model.has("videoFrames")) {
+                // preload images to remove flicker in chrome
+                for (var i = 0; i < this.model.get("videoFrames").length; i++) {
+                    new Image().src = this.model.get("videoFrames")[i];
+                }
+                
                 style += "background-image: url(" + this.model.get("videoFrames")[0] + ");";
-                style += "background-size: 100% auto; background-repeat: no-repeat;";
-
+                style += "background-repeat: no-repeat;";
+                style += "transition: background 0.3s;"
+                
             }
             else {
                 style += "background-color: #ebebeb;";
@@ -78,7 +92,7 @@ define([
         },
 
         onRender: function () {
-            if (this.model.has("deleted")) {
+            if (this.model.has("deleted") && this.removable) {
                 this.$el.css("opacity", 0.5);
             }
             else {

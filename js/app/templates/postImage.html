@@ -15,4 +15,7 @@
 <% if (typeof videoUrl !== "undefined") { %>
     <span class="glyphicon glyphicon-play-circle video-icon" aria-hidden="true"></span>
 <% } %>
+<% if (typeof duration !== "undefined") { %>
+    <span class="video-duration"><%- formatTime(duration) %></span>
+<% } %>
 </div>

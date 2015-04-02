@@ -6,9 +6,9 @@ define([
 function (Sjcl, Encoding, SjclConvert) {
 	"use strict";
 
-	function decrypt(packedData, isBinary, password) {
+	function decrypt(packedData, password) {
 		var data = Encoding.decode(packedData);
-		var encData = SjclConvert.convertToBits(data);
+		var encData = SjclConvert.convertToBits(data, true);
 		var key;
         if (password instanceof Array) {
 			key = Sjcl.codec.bytes.toBits(password);
@@ -20,31 +20,20 @@ function (Sjcl, Encoding, SjclConvert) {
         else {
             key = password;
         }
-		var ct = Sjcl.json._decrypt(key, encData);
-        var decrypted;
-        if (isBinary) {
-            decrypted = Sjcl.codec.arrayBuffer.fromBits(ct);
-            return {value: {mimeType: data.mimeType, data: decrypted}, transferable: [decrypted]};
-        }
-        else {
-            try {
-                decrypted = Sjcl.codec.utf8String.fromBits(ct);
-                return {value: {data: decrypted}, transferable: []};
-            }
-            catch (e) {
-                return {value: {error: "Could not convert decrypted data to string " + e.message}, transferable: []};
-            }
-        }
+        var ct;
+	    try {
+	        ct = Sjcl.json._decrypt(key, encData, {raw : 1 });
+	    }
+	    catch (e) {
+	        return { value: { error: "Could not decrypt data " + e.message }, transferable: [] };
+	    }
+        return {value: {mimeType: data.mimeType, data: ct}, transferable: [ct]};
+        
 	}
 
 	function encrypt(content, mimeType, isBinary, password) {
-		var data;
-        if (isBinary) {
-            data = Sjcl.codec.bytes.toBits(new Uint8Array(content));
-        }
-        else {
-            data = content;
-        }
+		var data =  content;
+        
         var key;
         if (password.hasOwnProperty("publicKey")) {
             var publicKeyBits = Sjcl.codec.hex.toBits(password.publicKey);
@@ -78,7 +67,7 @@ function (Sjcl, Encoding, SjclConvert) {
 		if (event.data.encrypt) {
 			return encrypt(event.data.content, event.data.mimeType, event.data.isBinary, event.data.password);
 		} else if (event.data.decrypt) {
-			return decrypt(event.data.encryptedContent, event.data.isBinary, event.data.password);
+			return decrypt(event.data.encryptedContent, event.data.password);
 		}
 		return false;
 	};

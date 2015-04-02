@@ -50,17 +50,13 @@ define(function() {
             var width = image.naturalWidth;
             var height = image.naturalHeight;
 
-            if (width > height) {
-                if (width > maxWidth) {
-                    height *= maxWidth / width;
-                    width = maxWidth;
-                }
+            if (width > maxWidth) {
+                height *= maxWidth / width;
+                width = maxWidth;
             }
-            else {
-                if (height > maxHeight) {
-                    width *= maxHeight / height;
-                    height = maxHeight;
-                }
+            if (height > maxHeight) {
+                width *= maxHeight / height;
+                height = maxHeight;
             }
 
             var canvas = document.createElement("canvas");
@@ -72,30 +68,56 @@ define(function() {
             canvasContext.drawImage(image, 0, 0, canvas.width, canvas.height);
             var fullsize =  canvas.toDataURL("image/jpeg");
 
-            var thumbscale = maxWidth < maxHeight ? 4 : 6;
+            var thumbMaxWidth = 500;
+            var thumbMaxHeight = 750;
 
-            maxWidth = maxWidth / thumbscale;
-            maxHeight = maxHeight / thumbscale;
-            if (width > height) {
-                if (width > maxWidth) {
-                    height *= maxWidth / width;
-                    width = maxWidth;
-                }
+            if (thumbMaxHeight >= height && thumbMaxWidth >= width) {
+                return { thumbnail: fullsize };
+            }
+
+            var thumbWidth, thumbHeight;
+            if (width >= height) {
+                thumbWidth = Math.min(thumbMaxWidth, width);
+                thumbHeight = thumbWidth * (height / width);
             }
             else {
-                if (height > maxHeight) {
-                    width *= maxHeight / height;
-                    height = maxHeight;
+                thumbHeight = Math.min(thumbMaxHeight, height);
+                thumbWidth = thumbHeight * (width / height);
+            }
+            
+            var canvasScale = 1;
+            var thumbCanvas;
+
+            
+            if (thumbHeight * 2 > height) {
+                thumbCanvas = canvas;
+            }
+            else {
+                thumbCanvas = document.createElement('canvas');
+                var thumbContext = thumbCanvas.getContext('2d');
+
+                // scale to 50%
+                thumbCanvas.width = width * 0.5;
+                thumbCanvas.height = height * 0.5;
+                thumbContext.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+
+                if (thumbHeight * 4 > height) {
+                    canvasScale = 0.5;
+                    // scale to 25%
+                    // reuse the same canvas, but just use top left quadrant 
+                    thumbContext.drawImage(thumbCanvas, 0, 0,
+                        thumbCanvas.width * canvasScale, thumbCanvas.height * canvasScale);
                 }
             }
+            var saveCanvas = document.createElement('canvas');
+            var saveContext = saveCanvas.getContext('2d');
 
+            saveCanvas.width = thumbWidth;
+            saveCanvas.height = thumbHeight;
 
-            canvas.width = width;
-            canvas.height = height;
-            var canvasContext2 = canvas.getContext("2d");
-
-            canvasContext2.drawImage(image, 0, 0, canvas.width, canvas.height);
-            var thumbnail = canvas.toDataURL("image/jpeg");
+            saveContext.drawImage(thumbCanvas, 0, 0, thumbCanvas.width * canvasScale, thumbCanvas.height * canvasScale,
+                                0, 0, saveCanvas.width, saveCanvas.height);
+            var thumbnail = saveCanvas.toDataURL("image/jpeg");
 
             return {thumbnail: thumbnail, fullsize: fullsize};
 

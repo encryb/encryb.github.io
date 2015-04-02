@@ -84,7 +84,7 @@ function ($, Backbone, Marionette, App) {
                     for (var i = 0; i < resp.items.length; i++) {
                         var inviteEntity = resp.items[i];
 
-                        AppEngine.inviteReceived({ id: inviteEntity.userId, password: App.state.myPassword, inviteeId: App.state.myId })
+                        AppEngine.inviteReceived({ id: App.state.myId, password: App.state.myPassword, inviterId: inviteEntity.userId })
                             .execute(function (resp) {});
                     }
 
@@ -115,7 +115,10 @@ function ($, Backbone, Marionette, App) {
 
                     for (var i = 0; i < resp.items.length; i++) {
                         var acceptEntity = resp.items[i];
-                        AppEngine.acceptReceived({id: acceptEntity.userId, inviterId: myUserId}).execute(function (resp) {});
+                        AppEngine.acceptReceived({
+                            id: App.state.myId, password: App.state.myPassword,
+                            invitedId: acceptEntity.userId
+                        }).execute(function (resp) { });
                     }
 
                 });
@@ -163,6 +166,7 @@ function ($, Backbone, Marionette, App) {
                     pictureUrl: profile.get('pictureUrl'),
                     publicKey: profile.get('publicKey')
                 };
+                console.log("publish profile", args);
                 AppEngine.setProfile(args).execute(function (resp) {
                     if (resp.error) {
                         console.log("publishProfile error", resp);

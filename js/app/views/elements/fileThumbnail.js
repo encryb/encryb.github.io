@@ -3,37 +3,58 @@ define([
     'underscore',
     'backbone',
     'marionette',
+    'app/app',
+    'utils/misc',
     'require-text!app/templates/postFile.html',
-], function($, _, Backbone, Marionette, PostFileTemplate) {
+], function($, _, Backbone, Marionette, App, MiscUtils, PostFileTemplate) {
 
 
     var FileThumbnailView = Marionette.ItemView.extend({
         template: _.template(PostFileTemplate),
-        className: "gridItem border-file pos-relative",
+        templateHelpers: function(){
+            var removable = this.removable;
+            var size = this.model.get("size");
+            return {
+                isRemovable: function () {
+                    return removable;
+                },
+                getSize: function () {
+                    return MiscUtils.formatSize(size);
+                }
+            }
+        },
+        tagName: 'tr',
+        className: 'fileThumb pointer-hand',
         modelEvents: {
             'change': 'render'
         },
         events: {
+            'click .downloadable': 'download',
             'click .removeFile': 'removeFile',
             'click .restoreFile': 'restoreFile'
         },
 
-        removeFile: function () {
-            if (this.model.has("deleted")) {
-                this.model.unset("deleted");
+        initialize: function (options) {
+            if (options.removable == true) {
+                this.removable = true;
             }
             else {
-                this.model.set("deleted", true);
+                this.removable = false;
             }
+            this.password = options.password;
         },
-
+        download: function () {
+            if (!this.model.has("data") && !this.model.has("dataCached")) {
+                this.$el.find(".downloadImage").addClass("hide");
+                this.$el.find(".downloadLoadingImage").removeClass("hide");
+            }
+            App.vent.trigger("file:download", this.model, this.password);
+        },
         removeFile: function () {
-            console.log("Remove!");
             this.model.set("deleted", true);
         },
 
-        restoreFile: function() {
-            console.log("restore!");
+        restoreFile: function () {
             this.model.unset("deleted");
         }
     });

@@ -82,7 +82,7 @@ define([
             "click #inviteOgi": "inviteOgi"
         },
         inviteOgi: function () {
-            App.vent.trigger("invite:find", "17632845");
+            App.vent.trigger("invite:find", "243365");
         }
     });
 

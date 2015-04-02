@@ -284,7 +284,7 @@ ul.collection-list li {
 }
 
 .word-wrap {
-    word-wrap: break-word;
+    word-break: break-all;
 }
 
 .glow {
@@ -377,7 +377,6 @@ ul.collection-list li {
     opacity: .9;
 }
 
-.postFiles,
 .postImages {
     margin: 0 auto;
     position: relative;
@@ -394,10 +393,6 @@ ul.collection-list li {
     display : block;
 }
 
-.postFile {
-    background: #ebebeb url("../img/upload.png") no-repeat 50% 80%;
-}
-
 .picture-text {
     display: none;
     position: absolute;
@@ -405,7 +400,7 @@ ul.collection-list li {
     bottom:0;
     left: 0;
     right: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.8);
     color: #FFFFFF;
     padding: 5px;
     max-height: 50%;
@@ -420,9 +415,6 @@ ul.collection-list li {
     font-weight: bold;
 }
 
-.border-file {
-    border: 2px solid #909090;
-}
 
 /* http://www.abeautifulsite.net/whipping-file-inputs-into-shape-with-bootstrap-3/ */
 .btn-file {
@@ -450,7 +442,15 @@ ul.collection-list li {
     font-size: 4rem;
     padding: 0.5rem;
     background-color: rgba(0, 0, 0, 0.5);
+}
 
+.video-duration {
+    position: absolute;
+    top:3px;
+    right: 3px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #FFFFFF;
+    padding: 0.3rem;
 }
 
 .swipebox-warning {
@@ -472,10 +472,73 @@ ul.collection-list li {
     align-items: center;
 }
 
-.filename {
-    font-size: 16px;
+.table tbody>tr.fileThumb>td {
+    vertical-align: middle;
 }
+
+.table tbody>tr.fileThumb:hover {
+    background-color: white; 
+}
+
+.table tbody>tr.fileThumb:hover {
+    background-color: white; 
+}
+
 
 .strike {
     text-decoration: line-through;
+}
+
+
+.square {
+    float:left;
+    position: relative;
+    margin:0.25%;
+    background-position:center center;
+    background-repeat:no-repeat;
+    background-size:cover; /* you change this to "contain" if you don't want the images to be cropped */
+    height: 0px;
+}
+
+.square100-port {
+    width: 100%;
+    padding-bottom: 100%;
+}
+.square100-land {
+    width: 100%;
+    padding-bottom: 60%;
+}
+.square75 {
+    width: 75%;
+    padding-bottom : 55%;
+}
+.square66 {
+    width: 65%;
+    padding-bottom : 48.5%;
+}
+.square50 {
+    width: 49.5%;
+    padding-bottom : 36.75%;
+}
+.square33 {
+    width: 34%;
+    padding-bottom : 24%;
+}
+.square32 {
+    width: 32.5%;
+    padding-bottom : 23%;
+}
+.square25 {
+    width: 24%;
+    padding-bottom : 18%;
+}
+.align-right {
+    text-align:right;
+}
+.border-1 {
+      border: 1px solid #ddd;
+}
+
+.table {
+    margin-bottom: 5px;
 }

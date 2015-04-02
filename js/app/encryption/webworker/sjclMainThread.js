@@ -59,12 +59,11 @@ define(["app/encryption/webworker/commonMainThread"], function (WorkerManager) {
 					worker.postMessage(message, tranferable, callback);
 				});
 			},
-			decrypt: function (encryptedContent, isBinary, password, callback) {
+			decrypt: function (encryptedContent, password, callback) {
 				workers.getFreeWorker(function (err, worker) {
 					var message = {
 						"password": password,
 						"encryptedContent": encryptedContent,
-                        "isBinary": isBinary,
 						"decrypt": true
 					};
 

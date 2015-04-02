@@ -30,21 +30,21 @@ function ($, Backbone, Marionette, App, EncryptionAsync, Keys, Dropbox, RemoteMa
             var manifestFile = "manifests" + "/" + MiscUtils.makeId();
             var attrs = {
                 userId: inviteModel.get("userId"),
-                name: inviteModel.get('name'),
-                intro: inviteModel.get('intro'),
-                publicKey: inviteModel.get('publicKey'),
+                name: inviteModel.get("name"),
+                intro: inviteModel.get("intro"),
+                publicKey: inviteModel.get("publicKey"),
                 manifestFile: manifestFile,
-                pictureUrl: inviteModel.get('pictureUrl')};
+                pictureUrl: inviteModel.get("pictureUrl")};
 
-            if (inviteModel.get('friendsDatastoreId')) {
-                attrs['friendsDatastoreId'] = inviteModel.get('friendsDatastoreId');
+            if (inviteModel.get("friendsDatastoreId")) {
+                attrs["friendsDatastoreId"] = inviteModel.get("friendsDatastoreId");
             }
             else {
-                attrs['invite'] = true;
+                attrs["invite"] = true;
             }
 
             $.when(Backbone.DropboxDatastore.createSharedDatastore()).then(function (datastore) {
-                attrs['myDatastoreId'] = datastore.getId();
+                attrs["myDatastoreId"] = datastore.getId();
                 friendAdapter.friends.create(attrs, {
                     success: function (model) {
                         deferred.resolve(model);
@@ -231,7 +231,11 @@ function ($, Backbone, Marionette, App, EncryptionAsync, Keys, Dropbox, RemoteMa
         },
         attachFriend: function(friend) {
             var friendAdapter = this;
-            if (!friend.get("friendsDatastoreId")) {
+
+            if (!friend.has("friendsDatastoreId")) {
+                friend.once("change:friendsDatastoreId", function (model, options) {
+                    friendAdapter.attachFriend(friend);
+                });
                 return;
             }
             $.when(this._getModelUsedToNotifyMe(friend)).done(function(notifyModel) {
@@ -265,7 +269,7 @@ function ($, Backbone, Marionette, App, EncryptionAsync, Keys, Dropbox, RemoteMa
             friend.set("publicKey", notifyModel.get("publicKey"));
             friend.save();
 
-            this.getManifest(friend, notifyModel.get('manifestUrl'));
+            this.getManifest(friend, notifyModel.get("manifestUrl"));
         },
 
         notifyFriend: function(friend) {
@@ -316,7 +320,7 @@ function ($, Backbone, Marionette, App, EncryptionAsync, Keys, Dropbox, RemoteMa
                 tasks.push(shareArchive);
             }
 
-            $.when(tasks).done(function(){
+            $.when.apply($, tasks).done(function(){
                 deferred.resolve(tasks.length > 0);
             });
 
@@ -403,20 +407,24 @@ function ($, Backbone, Marionette, App, EncryptionAsync, Keys, Dropbox, RemoteMa
         getManifest: function(friend, friendsManifest) {
 
             var friendAdapter = this;
-            Dropbox.downloadUrl(friendsManifest).done(function (data) {
-                var key = {secretKey: Keys.getEncodedKeys().secretKey};
-                $.when(EncryptionAsync.decryptText(key, data)).done(function(decryptedData){
-                        try {
-                            var manifest = JSON.parse(decryptedData);
-                            friendAdapter.updateCollection(friend, manifest);
-                        }
-                        catch (e) {
-                            friend.set("error", "Failed to parse " + friend.escape("name") + "'s manifest: " + e.message);
-                        }
-                    })
-                    .fail (function(error) {
-                        friend.set("error", "Failed to decode " + friend.escape("name") + "'s manifest: " + error);
-                    });
+            Dropbox.downloadUrl(friendsManifest)
+                .fail (function(error) {
+                    friend.set("error", "Failed to download " + friend.escape("name") + "'s manifest: " + error);
+                })
+                .done(function (data) {
+                    var key = {secretKey: Keys.getEncodedKeys().secretKey};
+                    $.when(EncryptionAsync.decryptText(key, data)).done(function(decryptedData){
+                            try {
+                                var manifest = JSON.parse(decryptedData);
+                                friendAdapter.updateCollection(friend, manifest);
+                            }
+                            catch (e) {
+                                friend.set("error", "Failed to parse " + friend.escape("name") + "'s manifest: " + e.message);
+                            }
+                        })
+                        .fail (function(error) {
+                            friend.set("error", "Failed to decode " + friend.escape("name") + "'s manifest: " + error);
+                        });
 
             });
         },

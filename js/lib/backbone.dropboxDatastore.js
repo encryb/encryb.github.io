@@ -257,7 +257,11 @@
     },
     deleteDatastore: function(datastoreId) {
         delete this._datastorePromises[datastoreId];
-        this.getDatastoreManager().deleteDatastore(datastoreId);
+        this.getDatastoreManager().deleteDatastore(datastoreId, function (error) {
+            if (error) {
+                throw error;
+            }
+        });
     },
 
     _createDatastorePromise: function(datastoreId) {

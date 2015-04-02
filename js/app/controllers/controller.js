@@ -30,7 +30,8 @@ function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdap
 
 
     function startDownload(uri, name) {
-        var link = document.createElement("a");
+        var link = document.getElementById("downloadLink");
+
         link.download = name;
         link.href = uri;
         link.click();
@@ -199,11 +200,13 @@ function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdap
                 window.scrollTo(0,0);
             });
 
-            wall.listenTo(App.vent, "friend:unselect", function(){
+            var friendUnselect = function () {
                 wall.friendsDetails.empty();
                 wall.posts.$el.show();
                 wall.createPost.$el.show();
-
+            }
+            wall.listenTo(App.vent, "friend:unselect", function(){
+                friendUnselect();
             });
 
             wall.listenTo(App.vent, "invite:find", function(friendId) {
@@ -251,7 +254,8 @@ function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdap
             });
 
             wall.listenTo(App.vent, "friend:unfriend", function(friendModel) {
-               FriendAdapter.deleteFriend(friendModel);
+                FriendAdapter.deleteFriend(friendModel);
+                friendUnselect();
             });
 
             wall.listenTo(App.vent, "post:created", function(postMeta, contentList, uiNotifyDeferred) {
@@ -624,6 +628,7 @@ function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdap
                     $.when.apply($, deferreds).fail(changeProfileFail).done(function () {
                         var deferred = $.Deferred();
                         var profileChanges = profile.changedAttributes();
+                        console.log("profileChanges", profileChanges);
                         if (!profileChanges) {
                             controller.showWall();
                             App.appRouter.navigate("");

@@ -6,24 +6,18 @@
                     <textarea id="editPostText" class="form-control" rows="5" autofocus><% if (typeof text !== "undefined") { %><%- text %><% } %></textarea>
                 </div>
             </div>
-            <!--
             <div class="form-group">
                 <div class="col-xs-12">
-                    <div class="dropzone dz-clickable">
-                        <div class="dz-default dz-message"><span><big>Click or drop to add images</big></span></div>
+                    <div class="editImages"></div>
+                </div>
+                <div class="col-xs-12">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-condensed border-1">
+                            <tbody class="editFiles"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-            -->
-            <div class="form-group">
-                <div class="col-xs-12">
-                    <div class="editImages relative-pos"></div>
-                </div>
-                <div class="col-xs-12">
-                    <div class="editFiles relative-pos"></div>
-                </div>
-            </div>
-
             <div class="form-group">
                 <div class="col-xs-12 dropzoneRegion">
                 </div>

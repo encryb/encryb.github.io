@@ -3,7 +3,6 @@ define([
     'underscore',
     'backbone',
     'marionette',
-    'cloudGrid',
     'jquery.swipebox',
     'autolinker',
     'app/app',
@@ -13,7 +12,7 @@ define([
     'utils/image',
     'utils/misc',
     'require-text!app/templates/postContent.html'
-], function($, _, Backbone, Marionette, CloudGrid, Swipebox, Autolinker, App, PostAdapter,
+], function($, _, Backbone, Marionette, Swipebox, Autolinker, App, PostAdapter,
             FileThumbnailView, ImageThumbnailView,
             ImageUtils, MiscUtils, PostContentTemplate){
 
@@ -43,7 +42,9 @@ define([
 
         ui: {
             postImages: '.postImages',
-            postFiles: '.postFiles'
+            postFiles: '.postFiles',
+            fileTable: '.fileTable',
+            imageGrid: '.imageGrid'
         },
 
         events: {
@@ -55,22 +56,12 @@ define([
             this.listenTo(this.model.get("poster"), "change:pictureUrl", this.render);
             this.listenTo(this.model.get("content"), "add", this.render);
             this.listenTo(this.model.get("content"), "remove", this.render);
-
-            var reflowGrid = function() {
-                if (this.ui.postImages) {
-                    this.ui.postImages.cloudGrid('reflowContent');
-                }
-                if (this.ui.postFiles) {
-                    this.ui.postFiles.cloudGrid('reflowContent');
-                }
-            }.bind(this);
-            this.listenTo(App.vent, "resize", reflowGrid);
-
+            this.listenTo(this.model, "change:text", this.render);
         },
 
         onShow: function () {
             var _this = this;
-            if (MiscUtils.isElementVisible(this.$el, 200)) {
+            if (MiscUtils.isElementVisible(this.$el, 400)) {
                 $.when(PostAdapter.fetchPost(this.model, false)).done(function () {
                     // by the time this returns, _this might be destroyed
                     _this.render();
@@ -78,7 +69,7 @@ define([
             }
             else {
                 var loadCheck = function () {
-                    var visible = MiscUtils.isElementVisible(this.$el, 200);
+                    var visible = MiscUtils.isElementVisible(this.$el, 400);
                     if (visible) {
                         this.stopListening(App.vent, "scroll", loadCheck);
                         this.stopListening(App.vent, "resize", loadCheck);
@@ -98,115 +89,110 @@ define([
             var postImagesElement = this.ui.postImages;
             var postFilesElement = this.ui.postFiles;
             var imageChildren = [];
-            var fileChildren = [];
-
-            var deferreds = [];
-
+          
+            var imageDeferreds = [];
+            
             if (this.model.has("content")) {
                 var password = this.model.get("password");
                 var collection = this.model.get("content");
                 var isFirst = true;
-                collection.each(function (model, index) {
-                    if (model.has("thumbnailUrl") || model.has("videoFramesUrl")) {
 
+                var thumbCount = 0;
+                var fileCount = 0;
+                collection.each(function (model, index) {
+                    
+                    if (model.has("thumbnailUrl") || model.has("videoFramesUrl")) {
+                        if (thumbCount > 3) {
+                            return;
+                        }
+                        thumbCount++;
                         var imageView = new ImageThumbnailView({model: model});
                         var imageElement = imageView.render().el;
-
 
                         $(imageElement).click(function () {
                             this.showImage(index);
                         }.bind(this));
 
+                        var imageDeferred = $.Deferred();
+                        imageDeferreds.push(imageDeferred.promise());
 
-                        // we have this in case of error downloading thumbnail
-                        if (!model.has("thumbnail")) {
-                            $.data(imageElement, 'grid-columns', 20);
-                            $.data(imageElement, 'grid-rows', 12);
+                        var thumbnail;
+                        if (model.has("thumbnail")) {
+                            thumbnail = model.get("thumbnail");
+                        }
+                        else if (model.has("videoFrames") && model.get("videoFrames").length > 0) {
+                            thumbnail = model.get("videoFrames")[0];
+                        }
+                        else if (model.has("errors")) {
+                            imageDeferred.resolve({ image: imageElement, size: { width: 400, height: 300 } });
+                            return;
                         }
                         else {
-
-                            var imageDeferred = $.Deferred();
-                            deferreds.push(imageDeferred.promise());
-                            (function(_imageElement) {
-                                $.when(ImageUtils.getNaturalSize(model.get("thumbnail"))).done(function(size) {
-                                    var ratio = size.width / size.height;
-                                    var cols, rows;
-                                    if (ratio > 2) {
-                                        cols = 8;
-                                        rows = 4;
-                                    }
-                                    else if (ratio < 1) {
-                                        cols = 6;
-                                        rows = 8;
-                                    }
-                                    else {
-                                        cols = 7;
-                                        rows = 4;
-                                    }
-                                    if (collection.length == 1 && size.width > 300) {
-                                        if (ratio >= 1) {
-                                            cols = cols * 3;
-                                            rows = rows * 3;
-                                        }
-                                        else {
-                                            cols = cols * 2;
-                                            rows = rows * 2;
-                                        }
-                                    }
-                                    else if (isFirst || collection.length == 2) {
-                                        if (ratio >= 1 && size.width > 300) {
-                                            cols = cols * 2;
-                                            rows = rows * 2;
-                                        }
-                                        isFirst = false;
-
-                                    }
-                                    $.data(_imageElement, 'grid-columns', cols);
-                                    $.data(_imageElement, 'grid-rows', rows);
-                                    imageDeferred.resolve();
-                                });
-                            })(imageElement);
+                            imageDeferred.resolve({ image: imageElement, size: { width: 400, height: 300 } });
+                            return;
                         }
-                        postImagesElement.append(imageElement);
-                        imageChildren.push(imageElement);
+                        (function(_imageElement, _imageDeferred, _thumbnail) {
+                            $.when(ImageUtils.getNaturalSize(thumbnail)).done(function(size) {
+                                _imageDeferred.resolve({ image: _imageElement, size: size });
+                            });
+                        })(imageElement, imageDeferred, thumbnail);
+                        
                     }
                     else if (model.has("filename")) {
-                        var fileView = new FileThumbnailView({model: model});
-                        var fileElement = fileView.render().el;
-                        fileElement.click(function () {
-                            if (!model.has("data")) {
-                                fileElement.find(".downloadImage").addClass("hide");
-                                fileElement.find(".downloadLoadingImage").removeClass("hide");
-                            }
-                            App.vent.trigger("file:download", model, password);
-                        }.bind(this));
-
-                        this.listenTo(model, "change:data", function() {
-                            fileElement.find(".downloadLoadingImage").addClass("hide");
-                            fileElement.find(".downloadDoneImage").removeClass("hide");
-                        });
-
-                        $.data(fileElement, 'grid-columns', 8);
-                        $.data(fileElement, 'grid-rows', 3);
+                        fileCount++;
+                        var fileView = new FileThumbnailView({model: model, password: password});
+                        var fileElement = fileView.render().el;         
                         postFilesElement.append(fileElement);
-                        fileChildren.push(fileElement);
                     }
                 }, this);
-            }
-            $.when.apply($, deferreds).done(function() {
-                setTimeout(function () {
-                    postImagesElement.cloudGrid({
-                        children: imageChildren,
-                        gridGutter: 3,
-                        gridSize: 17
-                    });
 
-                    postFilesElement.cloudGrid({
-                        children: fileChildren,
-                        gridGutter: 3,
-                        gridSize: 25
-                    });
-                }, 0);
+                if (thumbCount > 0) {
+                    this.ui.imageGrid.removeClass("hide");
+                }
+                if (fileCount > 0) {
+                    this.ui.fileTable.removeClass("hide");
+                }
+            }
+            
+            $.when.apply($, imageDeferreds).done(function () {
+                var len = arguments.length;
+                for (var i = 0; i < len; i++) {
+                    var element = arguments[i].image;
+                    if (len === 1) {
+                        var size = arguments[i].size;
+                        if (size.width > size.height) {
+                            $(element).addClass("square square100-land");
+                        }
+                        else {
+                            $(element).addClass("square square100-port");
+                        }
+                    }
+                    if (len === 2) {
+                        if (i === 0) {
+                            $(element).addClass("square square50");
+                        }
+                        else {
+                            $(element).addClass("square square50");
+                        }
+                    }
+                    if (len === 3) {
+                        if (i === 0) {
+                            $(element).addClass("square square66");
+                        }
+                        else {
+                            $(element).addClass("square square33");
+                        }
+                    }
+                    if (len === 4) {
+                        if (i === 0) {
+                            $(element).addClass("square square75");
+                        }
+                        else {
+                            $(element).addClass("square square25");
+                        }
+                    }
+                    postImagesElement.append(element);
+                }
             });
         },
 
@@ -217,7 +203,15 @@ define([
                     swipeboxArgs.push({href:content.getVideo(), video:true, title:content.get("caption")|| ""});
                 }
                 else {
-                    swipeboxArgs.push({href:content.getFullImage(), title:content.get("caption")|| ""});
+                    if (content.has("image")) {
+                        swipeboxArgs.push({ href: content.get("image"), title: content.get("caption") || "" });
+                    }
+                    else if (content.has("imageUrl")) {
+                        swipeboxArgs.push({ href: content.getFullImage(), title: content.get("caption") || "" });
+                    }
+                    else {
+                        swipeboxArgs.push({ href: content.get("thumbnail"), title: content.get("caption") || "" });
+                    }
                 }
             });
             $.swipebox(swipeboxArgs, {initialIndexOnArray:index});

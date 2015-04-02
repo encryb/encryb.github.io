@@ -36,10 +36,8 @@ define([
             if (password instanceof Array) {
                 password = Sjcl.codec.bytes.toBits(password);
             }
-            var ct = Sjcl.json._decrypt(password, encData);
-            var decrypted = Sjcl.codec.utf8String.fromBits(ct);
     
-            return decrypted;
+            return Sjcl.json._decrypt(password, encData);
         }
     }
         

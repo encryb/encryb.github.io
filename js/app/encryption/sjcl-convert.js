@@ -15,7 +15,7 @@ define(["sjcl"], function(Sjcl) {
     }
 
     var SjclConvert = {
-        convertToBits: function(obj) {
+        convertToBits: function(obj, excludeCt) {
             var result = {};
             if (obj.kemtag) {
                 result['kemtag'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.kemtag));
@@ -24,7 +24,12 @@ define(["sjcl"], function(Sjcl) {
                 result['salt'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.salt));
             }
             result['iv'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.iv));
-            result['ct'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.ct));
+            if (excludeCt) {
+                result['ct'] = obj.ct.buffer;
+            }
+            else {
+                result['ct'] = Sjcl.codec.bytes.toBits(new Uint8Array(obj.ct));
+            }
             return result;
         },
 
@@ -38,7 +43,13 @@ define(["sjcl"], function(Sjcl) {
                 result['salt'] = fromBitsToTypedArray(obj.salt);
             }
             result['iv'] = fromBitsToTypedArray(obj.iv);
-            result['ct'] = fromBitsToTypedArray(obj.ct);
+            if (obj.ct instanceof ArrayBuffer) {
+                result['ct'] = new Uint8Array(obj.ct);
+            }
+            else {
+                result['ct'] = fromBitsToTypedArray(obj.ct);
+            }
+            
             return result;
         }
     }

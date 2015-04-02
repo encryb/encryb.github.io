@@ -283,8 +283,15 @@ define([
         updatePost: function(model, changes, addedContent, removedContent) {
 
             var deferred = $.Deferred();
-            var password = Sjcl.codec.bytes.toBits(model.get("password"));
-
+            var password;
+            if (model.has("password")) {
+                password = Sjcl.codec.bytes.toBits(model.get("password"));
+            }
+            else {
+                password = Sjcl.random.randomWords(8, 1);
+                model.set("password", Sjcl.codec.bytes.fromBits(password));
+            }
+                
             var setupTasks = [];
             if (!model.has("folderId")) {
                 if (addedContent.length > 0) {
