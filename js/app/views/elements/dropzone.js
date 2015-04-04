@@ -125,6 +125,7 @@ define([
                                 .done(function() {
                                     WindowUrl.revokeObjectURL(video.src);
                                     _content['video'] = _file;
+                                    _content['videoname'] = _file.name;
                                     _content['videoFrames'] = frames;
                                     _loadDeferred.resolve();
                                 });

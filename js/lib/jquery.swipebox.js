@@ -663,6 +663,7 @@ define(["jquery"], function($) {
 				var $this = this,
 					src,
 					slide,
+                    errorCallback,
 					isHostedVideo = false;
 
 				if ( elements[ index ] !== undefined ) {
@@ -670,6 +671,9 @@ define(["jquery"], function($) {
 					src = elem.href;
 					if (elem.video) {
 						isHostedVideo = true;
+					}
+					if (elem.errorCallback) {
+					    errorCallback = elem.errorCallback;
 					}
 				}
 
@@ -682,10 +686,16 @@ define(["jquery"], function($) {
 
 				var _openMedia = function(media) {
 					if (!$this.isVideo(media)) {
-						$this.loadMedia(media, isHostedVideo,  function () {
-							slide.removeClass('slide-loading');
-							slide.html(this);
-						});
+					    $this.loadMedia(media, isHostedVideo, function () {
+					        slide.removeClass('slide-loading');
+					        slide.html(this);
+					    }, function (errorMsg) {
+					        slide.removeClass('slide-loading');
+					        var button = $("<a class='swipebox-warning'> Your browser could not play the video. Click to download.</a>");
+					        button.on("click", function () { console.log("HELLO"); errorCallback() });
+					        button.on("touchend", function () { console.log("HELLO"); errorCallback() });
+					        slide.html(button);
+					    });
 					} else {
 						slide.removeClass('slide-loading');
 						slide.html($this.getVideo(media));
@@ -780,7 +790,7 @@ define(["jquery"], function($) {
 			/**
 			 * Load image
 			 */
-			loadMedia : function ( src, isHostedVideo, callback ) {
+			loadMedia : function ( src, isHostedVideo, callback, errorCallback ) {
 				if (  !isHostedVideo ) {
 					var img = $( '<img>' ).on( 'load', function() {
 						callback.call( img );
@@ -789,9 +799,13 @@ define(["jquery"], function($) {
 					img.attr( 'src', src );
 				}
 				else {
-					var video = $('<video controls style="max-width:80%; max-height:80%">').on( 'loadedmetadata', function() {
+				    var video = $('<video autoplay controls style="max-width:80%; max-height:80%">');
+                    video.on('loadedmetadata', function () {
 						callback.call( video );
-					} );
+                    });
+                    video.on('error', function (msg) {
+                        errorCallback(msg);
+                    });
 
 					video.attr('src', src);
 				}

@@ -31,7 +31,7 @@ function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdap
 
     function startDownload(uri, name) {
         var link = document.getElementById("downloadLink");
-
+        
         link.download = name;
         link.href = uri;
         link.click();
@@ -365,6 +365,11 @@ function (Backbone, Marionette, Bootstrap, Bootbox, App, FriendAdapter, PostAdap
             wall.listenTo(App.vent, "file:download", function(content){
                 $.when(content.getData()).done(function(data){
                     startDownload(data, content.get("filename"));
+                });
+            });
+            wall.listenTo(App.vent, "video:download", function (content) {
+                $.when(content.getVideo()).done(function (data) {
+                    startDownload(data, content.get("videoname"));
                 });
             });
 

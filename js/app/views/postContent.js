@@ -93,7 +93,6 @@ define([
             var imageDeferreds = [];
             
             if (this.model.has("content")) {
-                var password = this.model.get("password");
                 var collection = this.model.get("content");
                 var isFirst = true;
 
@@ -140,7 +139,7 @@ define([
                     }
                     else if (model.has("filename")) {
                         fileCount++;
-                        var fileView = new FileThumbnailView({model: model, password: password});
+                        var fileView = new FileThumbnailView({model: model});
                         var fileElement = fileView.render().el;         
                         postFilesElement.append(fileElement);
                     }
@@ -200,7 +199,10 @@ define([
             var swipeboxArgs = [];
             this.model.get("content").each(function(content) {
                 if (content.has("videoUrl")) {
-                    swipeboxArgs.push({href:content.getVideo(), video:true, title:content.get("caption")|| ""});
+                    var errorCallback = function () {
+                        App.vent.trigger("video:download", content);
+                    }.bind(this);
+                    swipeboxArgs.push({href:content.getVideo(), errorCallback: errorCallback, video:true, title:content.get("caption")|| ""});
                 }
                 else {
                     if (content.has("image")) {
@@ -213,7 +215,7 @@ define([
                         swipeboxArgs.push({ href: content.get("thumbnail"), title: content.get("caption") || "" });
                     }
                 }
-            });
+            }.bind(this));
             $.swipebox(swipeboxArgs, {initialIndexOnArray:index});
         },
 

@@ -61,7 +61,6 @@ define([
             var fileChildren = [];
 
             if (this.model.has("content")) {
-                var password = this.model.get("password");
                 var collection = this.model.get("content");
                 collection.each(function (model, index) {
                     if (model.has("thumbnailUrl") || model.has("videoFramesUrl")) {
@@ -71,7 +70,7 @@ define([
                         editImagesElement.append(imageElement);
                     }
                     else if (model.has("filename")) {
-                        var fileView = new FileThumbnailView({model: model, removable: true, password: password});
+                        var fileView = new FileThumbnailView({model: model, removable: true});
                         var fileElement = fileView.render().el;
                         editFilesElement.append(fileElement);
                     }

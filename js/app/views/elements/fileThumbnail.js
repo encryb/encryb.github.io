@@ -41,14 +41,13 @@ define([
             else {
                 this.removable = false;
             }
-            this.password = options.password;
         },
         download: function () {
             if (!this.model.has("data") && !this.model.has("dataCached")) {
                 this.$el.find(".downloadImage").addClass("hide");
                 this.$el.find(".downloadLoadingImage").removeClass("hide");
             }
-            App.vent.trigger("file:download", this.model, this.password);
+            App.vent.trigger("file:download", this.model);
         },
         removeFile: function () {
             this.model.set("deleted", true);
