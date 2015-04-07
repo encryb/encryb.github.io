@@ -77,8 +77,7 @@ define([
 
                 if (file.type.match(/image.*/)) {
                     var image = new Image();
-                    image.src = WindowUrl.createObjectURL(file);
-
+                    
                     image.onload = (function() {
                         var resized = ImageUtil.resize(image, 1920, 1440);
                         WindowUrl.revokeObjectURL(image.src);
@@ -88,11 +87,11 @@ define([
                         }
                         loadDeferred.resolve();
                     });
+                    image.src = WindowUrl.createObjectURL(file);
+
                 }
                 else if (file.type.match(/video.*/)) {
                     var video = document.createElement('video');
-                    video.src = WindowUrl.createObjectURL(file);
-
                     var captureVideoFrame = function (sourceVideo, location) {
                         var deferred = $.Deferred();
                         $(sourceVideo).one("seeked", function () {
@@ -141,6 +140,7 @@ define([
                         content['duration'] = video.duration;
 
                     });
+                    video.src = WindowUrl.createObjectURL(file);
                 }
                 else {
                     content['data'] = file;
