@@ -61,15 +61,10 @@ define([
         getContent: function() {
 
             var deferred = $.Deferred();
-
             var files = this.dropzone.files;
-
             var contentList = [];
-
             var deferreds = [];
-            for (var i = 0; i < files.length; i++) {
-                var file = files[i];
-
+            files.forEach(function (file) {
                 var content = {};
 
                 var caption = file.caption;
@@ -84,55 +79,68 @@ define([
                     var image = new Image();
                     image.src = WindowUrl.createObjectURL(file);
 
-                    image.onload = (function (_image, _loadDeferred, _content) {
-                        return function () {
-                            var resized = ImageUtil.resize(_image, 1920, 1440);
-                            WindowUrl.revokeObjectURL(image.src);
-                            _content["thumbnail"] = resized.thumbnail;
-                            if (resized.hasOwnProperty("fullsize")) {
-                                _content['image'] = resized.fullsize;
-                            }
-                            _loadDeferred.resolve();
-                        };
-                    }(image, loadDeferred, content));
+                    image.onload = (function() {
+                        var resized = ImageUtil.resize(image, 1920, 1440);
+                        WindowUrl.revokeObjectURL(image.src);
+                        content["thumbnail"] = resized.thumbnail;
+                        if (resized.hasOwnProperty("fullsize")) {
+                            content['image'] = resized.fullsize;
+                        }
+                        loadDeferred.resolve();
+                    });
                 }
                 else if (file.type.match(/video.*/)) {
                     var video = document.createElement('video');
                     video.src = WindowUrl.createObjectURL(file);
 
-                    var captureVideoFrame = function(sourceVideo, location) {
+                    var captureVideoFrame = function (sourceVideo, location) {
                         var deferred = $.Deferred();
                         $(sourceVideo).one("seeked", function () {
                             var frame = ImageUtil.captureFrame(video, 480, 360);
-                           deferred.resolve(frame);
+                            deferred.resolve(frame);
                         });
                         sourceVideo.currentTime = sourceVideo.duration * location;
                         return deferred.promise();
                     }
 
-                    $(video).one("loadedmetadata", function (_video, _file, _loadDeferred, _content) {
-                        return function () {
-                            var frames = [];
-                            var addToFrames = function(frame) {
-                                frames.push(frame);
-                            }
-                            $.when(captureVideoFrame(video, 0.1)).then(addToFrames)
-                                .then(captureVideoFrame.bind(null, video, 0.25)).then(addToFrames)
-                                .then(captureVideoFrame.bind(null, video, 0.40)).then(addToFrames)
-                                .then(captureVideoFrame.bind(null, video, 0.55)).then(addToFrames)
-                                .then(captureVideoFrame.bind(null, video, 0.70)).then(addToFrames)
-                                .then(captureVideoFrame.bind(null, video, 0.85)).then(addToFrames)
-                                .done(function() {
-                                    WindowUrl.revokeObjectURL(video.src);
-                                    _content['video'] = _file;
-                                    _content['videoname'] = _file.name;
-                                    _content['videoFrames'] = frames;
-                                    _loadDeferred.resolve();
-                                });
-                            _content['duration'] = _video.duration;
+                    $(video).one("error", function () {
+                        content['data'] = file;
+                        content['size'] = file.size;
+                        content['filename'] = file.name;
+                        loadDeferred.resolve();
+                    });
 
-                        };
-                    }(video, file, loadDeferred, content));
+                    $(video).one("loadedmetadata", function () {
+                        
+                        // we can not parse the video properly. Store it as file.
+                        if (video.videoHeight === 0 || video.videoWidth === 0) {
+                            content['data'] = file;
+                            content['size'] = file.size;
+                            content['filename'] = file.name;
+                            loadDeferred.resolve();
+                            return;
+                        }
+
+                        var frames = [];
+                        var addToFrames = function (frame) {
+                            frames.push(frame);
+                        }
+                        $.when(captureVideoFrame(video, 0.1)).then(addToFrames)
+                            .then(captureVideoFrame.bind(null, video, 0.25)).then(addToFrames)
+                            .then(captureVideoFrame.bind(null, video, 0.40)).then(addToFrames)
+                            .then(captureVideoFrame.bind(null, video, 0.55)).then(addToFrames)
+                            .then(captureVideoFrame.bind(null, video, 0.70)).then(addToFrames)
+                            .then(captureVideoFrame.bind(null, video, 0.85)).then(addToFrames)
+                            .done(function () {
+                                WindowUrl.revokeObjectURL(video.src);
+                                content['video'] = file;
+                                content['videoname'] = file.name;
+                                content['videoFrames'] = frames;
+                                loadDeferred.resolve();
+                            });
+                        content['duration'] = video.duration;
+
+                    });
                 }
                 else {
                     content['data'] = file;
@@ -141,7 +149,7 @@ define([
                     loadDeferred.resolve();
                 }
                 contentList.push(content);
-            }
+            });
 
             $.when.apply($, deferreds).done(function () {
                 deferred.resolve(contentList);

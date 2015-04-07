@@ -68,8 +68,8 @@ define(function() {
             canvasContext.drawImage(image, 0, 0, canvas.width, canvas.height);
             var fullsize =  canvas.toDataURL("image/jpeg");
 
-            var thumbMaxWidth = 500;
-            var thumbMaxHeight = 750;
+            var thumbMaxWidth = 600;
+            var thumbMaxHeight = 900;
 
             if (thumbMaxHeight >= height && thumbMaxWidth >= width) {
                 return { thumbnail: fullsize };
@@ -101,7 +101,7 @@ define(function() {
                 thumbCanvas.height = height * 0.5;
                 thumbContext.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
 
-                if (thumbHeight * 4 > height) {
+                if (thumbHeight * 4 < height) {
                     canvasScale = 0.5;
                     // scale to 25%
                     // reuse the same canvas, but just use top left quadrant 

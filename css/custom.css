@@ -493,7 +493,6 @@ ul.collection-list li {
 .square {
     float:left;
     position: relative;
-    margin:0.25%;
     background-position:center center;
     background-repeat:no-repeat;
     background-size:cover; /* you change this to "contain" if you don't want the images to be cropped */
@@ -509,28 +508,34 @@ ul.collection-list li {
     padding-bottom: 60%;
 }
 .square75 {
-    width: 75%;
-    padding-bottom : 55%;
+    margin: 1px;
+    width: calc(75% - 2px);
+    padding-bottom : calc(60% - 2.8px);
 }
 .square66 {
-    width: 65%;
-    padding-bottom : 48.5%;
+    margin: 1px;
+    width: calc(66.6667% - 2px);
+    padding-bottom : calc(50% - 2px);
 }
 .square50 {
-    width: 49.5%;
-    padding-bottom : 36.75%;
+    margin: 1px;
+    width: calc(50% - 2px);
+    padding-bottom : calc(40% - 2px);
 }
 .square33 {
-    width: 34%;
-    padding-bottom : 24%;
+    margin: 1px;
+    width: calc(33.33333% - 2px);
+    padding-bottom : calc(25% - 2px);
 }
 .square32 {
+    margin: 1px;
     width: 32.5%;
     padding-bottom : 23%;
 }
 .square25 {
-    width: 24%;
-    padding-bottom : 18%;
+    margin: 1px;
+    width: calc(25% - 2px);
+    padding-bottom : calc(20% - 2px);
 }
 .align-right {
     text-align:right;

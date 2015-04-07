@@ -6,8 +6,9 @@ define([
     'compat/windowUrl',
     'utils/data-convert',
     'utils/encoding',
+    'utils/image',
     'utils/misc'
-], function (Backbone, Sjcl, Storage, EncryptionAsync, WindowUrl, DataConvert, Encoding, MiscUtils) {
+], function (Backbone, Sjcl, Storage, EncryptionAsync, WindowUrl, DataConvert, Encoding, ImageUtils, MiscUtils) {
 
     // $CONFIG
     var FOLDER_POSTS = "posts/";
@@ -40,7 +41,30 @@ define([
                             }
                         },
                         setError.bind(null, model, key + " decryption error")
+                    )
+                    .then(
+                        function () {
+                            var thumbnail;
+                            if (key === "thumbnail" && model.has("thumbnail")) {
+                                thumbnail = model.get("thumbnail");
+                            }
+                            else if (key === "videoFrames" && model.has("videoFrames") && model.get("videoFrames").length > 0) {
+                                thumbnail = model.get("videoFrames")[0];
+                            }
+                            else {
+                                return;
+                            }
+
+                            var deferred = $.Deferred();
+                            $.when(ImageUtils.getNaturalSize(thumbnail)).done(function (size) {
+                                model.set(key + "Size", size);
+                                deferred.resolve();
+                            });
+                            return deferred;
+
+                        }
                     );
+                       
             }
             return deferred;
         },

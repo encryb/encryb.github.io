@@ -44,11 +44,13 @@ define([
             postImages: '.postImages',
             postFiles: '.postFiles',
             fileTable: '.fileTable',
-            imageGrid: '.imageGrid'
+            imageGrid: '.imageGrid',
+            moreImages: '.moreImages'
         },
 
         events: {
-            "click .post-thumbnail": "clickedPosterPicture"
+            "click .post-thumbnail": "clickedPosterPicture",
+            "click @ui.moreImages": "expandImages"
         },
 
         initialize: function() {
@@ -90,7 +92,7 @@ define([
             var postFilesElement = this.ui.postFiles;
             var imageChildren = [];
           
-            var imageDeferreds = [];
+            var images = [];
             
             if (this.model.has("content")) {
                 var collection = this.model.get("content");
@@ -101,10 +103,10 @@ define([
                 collection.each(function (model, index) {
                     
                     if (model.has("thumbnailUrl") || model.has("videoFramesUrl")) {
-                        if (thumbCount > 3) {
+                        thumbCount++;
+                        if (thumbCount > 4 && !this.expandedImages) {
                             return;
                         }
-                        thumbCount++;
                         var imageView = new ImageThumbnailView({model: model});
                         var imageElement = imageView.render().el;
 
@@ -112,30 +114,21 @@ define([
                             this.showImage(index);
                         }.bind(this));
 
-                        var imageDeferred = $.Deferred();
-                        imageDeferreds.push(imageDeferred.promise());
-
-                        var thumbnail;
-                        if (model.has("thumbnail")) {
-                            thumbnail = model.get("thumbnail");
+                      
+                        var size;
+                        if (model.has("thumbnailSize")) {
+                            size = model.get("thumbnailSize");
                         }
                         else if (model.has("videoFrames") && model.get("videoFrames").length > 0) {
-                            thumbnail = model.get("videoFrames")[0];
+                            size = model.get("videoFramesSize")
                         }
                         else if (model.has("errors")) {
-                            imageDeferred.resolve({ image: imageElement, size: { width: 400, height: 300 } });
-                            return;
+                            size =  { width: 400, height: 300 };
                         }
                         else {
-                            imageDeferred.resolve({ image: imageElement, size: { width: 400, height: 300 } });
-                            return;
+                            size = { width: 400, height: 300 };
                         }
-                        (function(_imageElement, _imageDeferred, _thumbnail) {
-                            $.when(ImageUtils.getNaturalSize(thumbnail)).done(function(size) {
-                                _imageDeferred.resolve({ image: _imageElement, size: size });
-                            });
-                        })(imageElement, imageDeferred, thumbnail);
-                        
+                        images.push({ element: imageElement, size: size });
                     }
                     else if (model.has("filename")) {
                         fileCount++;
@@ -145,6 +138,9 @@ define([
                     }
                 }, this);
 
+                if (thumbCount > 4 && !this.expandedImages) {
+                    this.ui.moreImages.removeClass("hide");
+                }
                 if (thumbCount > 0) {
                     this.ui.imageGrid.removeClass("hide");
                 }
@@ -153,45 +149,43 @@ define([
                 }
             }
             
-            $.when.apply($, imageDeferreds).done(function () {
-                var len = arguments.length;
-                for (var i = 0; i < len; i++) {
-                    var element = arguments[i].image;
-                    if (len === 1) {
-                        var size = arguments[i].size;
-                        if (size.width > size.height) {
-                            $(element).addClass("square square100-land");
-                        }
-                        else {
-                            $(element).addClass("square square100-port");
-                        }
+            var len = images.length;
+            images.forEach(function (image, i) {
+                var element = image.element;
+                if (len === 1) {
+                    var size = image.size;
+                    if (size.width > size.height) {
+                        $(element).addClass("square square100-land");
                     }
-                    if (len === 2) {
-                        if (i === 0) {
-                            $(element).addClass("square square50");
-                        }
-                        else {
-                            $(element).addClass("square square50");
-                        }
+                    else {
+                        $(element).addClass("square square100-port");
                     }
-                    if (len === 3) {
-                        if (i === 0) {
-                            $(element).addClass("square square66");
-                        }
-                        else {
-                            $(element).addClass("square square33");
-                        }
-                    }
-                    if (len === 4) {
-                        if (i === 0) {
-                            $(element).addClass("square square75");
-                        }
-                        else {
-                            $(element).addClass("square square25");
-                        }
-                    }
-                    postImagesElement.append(element);
                 }
+                if (len === 2) {
+                    if (i === 0) {
+                        $(element).addClass("square square50");
+                    }
+                    else {
+                        $(element).addClass("square square50");
+                    }
+                }
+                if (len === 3) {
+                    if (i === 0) {
+                        $(element).addClass("square square66");
+                    }
+                    else {
+                        $(element).addClass("square square33");
+                    }
+                }
+                if (len >= 4) {
+                    if (i === 0) {
+                        $(element).addClass("square square75");
+                    }
+                    else {
+                        $(element).addClass("square square25");
+                    }
+                }
+                postImagesElement.append(element);
             });
         },
 
@@ -224,6 +218,10 @@ define([
                 return false;
             }
             App.vent.trigger("friend:selected", this.model.get("poster"));
+        },
+        expandImages: function () {
+            this.expandedImages = true;
+            this.render();
         }
     });
     return PostContentView;
