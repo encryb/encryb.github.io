@@ -8,6 +8,7 @@
     }
 }(this, function (postal) {
     window.crypto = window.crypto || window.msCrypto;
+    window.crypto.subtle = window.crypto.subtle || window.crypto.webkitSubtle;
         
     var config = {
         aesCipher: "AES-CBC",
