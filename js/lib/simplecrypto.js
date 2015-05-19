@@ -6,7 +6,7 @@
     } else {
         root.simpleCrypto = factory();
     }
-}(this, function (postal) {
+}(this, function () {
     window.crypto = window.crypto || window.msCrypto;
     window.crypto.subtle = window.crypto.subtle || window.crypto.webkitSubtle;
         
@@ -281,7 +281,7 @@
 
                 var encryptData = function(onError, onSuccess) {
                         
-                    simpleCrypto.sym.encrypt(data, onError, function (aesDict) {
+                    simpleCrypto.sym.encrypt(data, {}, onError, function (aesDict) {
                         scope = aesDict;
                         var combinedKeys = combineBuffers(aesDict.aesKey, aesDict.hmacKey);
                         scope["combinedKeys"] = combinedKeys;
@@ -356,36 +356,69 @@
         },
 
         sym: {
-            encrypt: function (data, onError, onSuccess) {
+            encrypt: function (data, options, onError, onSuccess) {
 
                 var result = {};
 
-                var generateKeyAES = function (onError, onSuccess) {
-                    wrap(window.crypto.subtle.generateKey(
-                            { name: config.aesCipher, length: config.aesLength },
-                            true,
-                            ["encrypt", "decrypt"]
-                        ),
-                        onError,
-                        function (aesKey) {
-                            result["aesKey"] = aesKey;
-                            onSuccess();
-                        }
-                    )
+                var getKeyAES = function (onError, onSuccess) {
+                    
+                    if (options.aesKey) {
+                        wrap(window.crypto.subtle.importKey(
+                                "raw",
+                                options.aesKey,
+                                { name: config.aesCipher },
+                                false,
+                                ["encrypt", "decrypt"]),
+                            onError,
+                            function (aesKey) {
+                                result["aesKey"] = aesKey;
+                                onSuccess();
+                            }
+                        );
+                    }
+                    else {
+                        wrap(window.crypto.subtle.generateKey(
+                                { name: config.aesCipher, length: config.aesLength },
+                                true,
+                                ["encrypt", "decrypt"]
+                            ),
+                            onError,
+                            function (aesKey) {
+                                result["aesKey"] = aesKey;
+                                onSuccess();
+                            }
+                        )
+                    }
                 }
 
-                var generateKeyHMAC = function (onError, onSuccess) {
-                    wrap(window.crypto.subtle.generateKey(
-                            config.hmacOptions,
-                            true,
-                            ["sign", "verify"]
-                        ),
-                        onError,
-                        function (hmacKey) {
-                            result["hmacKey"] = hmacKey;
-                            onSuccess();
-                        }
-                    );
+                var getKeyHMAC = function (onError, onSuccess) {
+                    if (options.hmacKey) {
+                        wrap(window.crypto.subtle.importKey(
+                                "raw",
+                                options.hmacKey,
+                                config.hmacOptions,
+                                false,
+                                ["sign", "verify"]),
+                            onError,
+                            function (hmacKey) {
+                                result["hmacKey"] = hmacKey;
+                                onSuccess();
+                            }
+                        );
+                    }
+                    else {
+                        wrap(window.crypto.subtle.generateKey(
+                                config.hmacOptions,
+                                true,
+                                ["sign", "verify"]
+                            ),
+                            onError,
+                            function (hmacKey) {
+                                result["hmacKey"] = hmacKey;
+                                onSuccess();
+                            }
+                        );
+                    }
                 }
 
                 var encryptAES = function (onError, onSuccess) {
@@ -419,6 +452,11 @@
                 }
 
                 var exportKeyAES = function (onError, onSuccess) {
+                    if (options.aesKey) {
+                        result["rawAesKey"] = options.aesKey;
+                        onSuccess();
+                        return;
+                    }
                     wrap(window.crypto.subtle.exportKey("raw", result.aesKey),
                         onError,
                         function (rawAesKey) {
@@ -429,6 +467,11 @@
                 }
 
                 var exportKeyHMAC = function (onError, onSuccess) {
+                    if (options.hmacKey) {
+                        result["rawHmacKey"] = options.hmacKey;
+                        onSuccess();
+                        return;
+                    }
                     wrap(window.crypto.subtle.exportKey("raw", result.hmacKey),
                         onError,
                         function (rawHmacKey) {
@@ -438,8 +481,8 @@
                     );
                 }
 
-                next(generateKeyAES, "Could not generate AES key", onError,
-                next(generateKeyHMAC, "Could not generate HMAC key", onError,
+                next(getKeyAES, "Could not generate AES key", onError,
+                next(getKeyHMAC, "Could not generate HMAC key", onError,
                 next(encryptAES, "Could not AES Encrypt", onError,
                 next(signHMAC, "Could not HMAC sign", onError,
                 next(exportKeyAES, "Could not export AES key", onError,
